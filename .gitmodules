@@ -1,0 +1,3 @@
+[submodule "themes/chunky"]
+	path = themes/chunky
+	url = https://github.com/puresyntax71/hugo-theme-chunky-poster.git

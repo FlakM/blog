@@ -1,0 +1,13 @@
+baseURL = "https://flakm.github.io/"
+languageCode = "en-us"
+title = "FlakM's blog"
+theme = "chunky"
+
+[params]
+share = true
+  [params.prismJS]
+    enable = true
+    theme = "okaidia"
+  [params.commento]
+    enable = true
+    url = "https://m.commento.io"
