@@ -1,9 +1,10 @@
 ---
-title: "Rustypi 2"
+title: "Część 2: zardzewiały ekran LCD"
 date: 2020-07-01T14:20:17+02:00
 draft: true
 authors: ["flakm"]
-images: ["/images/hello_world.jpg", /images/panda.jpeg ]
+images: ["/images/hello_world.jpg" ]
+series: ["RustyPi"]
 ---
 
 

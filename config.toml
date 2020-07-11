@@ -3,7 +3,10 @@ languageCode = "en-us"
 title = "FlakM's blog"
 theme = "chunky"
 
-
+[taxonomies]
+  category = "categories"
+  series = "series"
+  tag = "tags"
 
 
 [params]
