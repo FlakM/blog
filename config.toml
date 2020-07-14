@@ -11,7 +11,7 @@ googleAnalytics = "UA-172669006-1"
 
 [taxonomies]
   category = "categories"
-  series = "series"
+  # series = "series"
   tag = "tags"
   author = "authors"
   

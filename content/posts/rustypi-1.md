@@ -1,5 +1,5 @@
 ---
-title: "Część 1: zardzewiała dioda"
+title: "Zardzewiała dioda"
 date: 2020-07-01T14:13:56+02:00
 draft: false
 authors: ["Maciej Flak"]
@@ -10,7 +10,7 @@ images: [
     "images/rystypi/leds/it-crowd-gif-4.gif"
     
     ]
-series: ["Rustberry PI"]
+# series: ["Rustberry PI"]
 ---
 
 Przez ostatnie kilka lat zajmowałem się programowaniem aplikacji biznesowych.

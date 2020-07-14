@@ -4,7 +4,7 @@ date: 2020-07-01T14:20:17+02:00
 draft: true
 authors: ["Maciej Flak"]
 images: ["/images/hello_world.jpg" ]
-series: ["Rustberry PI"]
+# series: ["Rustberry PI"]
 ---
 
 
