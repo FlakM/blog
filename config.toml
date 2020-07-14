@@ -5,6 +5,8 @@ footnoteReturnLinkContents = "^"
 title = "FlakM blog"
 theme = "chunky"
 enableInlineShortcodes = true
+disqusShortname = "flakm-blog"
+googleAnalytics = "UA-172669006-1"
 
 
 [taxonomies]
@@ -51,5 +53,5 @@ enableInlineShortcodes = true
     enable = true
     theme = "okaidia"
   [params.commento]
-    enable = true
+    enable = false
     url = "https://m.commento.io"
