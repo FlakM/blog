@@ -1,30 +1,31 @@
 ---
 title: "Część 1: zardzewiała dioda"
 date: 2020-07-01T14:13:56+02:00
-draft: true
-authors: ["flakm"]
-images: ["/images/yannick-pipke-GtcA8mw0t1U-unsplash.jpg", "images/rystypi/leds/taśma.jpg","images/rystypi/leds/układ.jpg" ]
-series: ["RustyPi"]
+draft: false
+authors: ["Maciej Flak"]
+images: [
+    "/images/yannick-pipke-GtcA8mw0t1U-unsplash.jpg", 
+    "images/rystypi/leds/taśma.jpg",
+    "images/rystypi/leds/układ.jpg",
+    "images/rystypi/leds/it-crowd-gif-4.gif"
+    
+    ]
+series: ["Rustberry PI"]
 ---
 
-
 Przez ostatnie kilka lat zajmowałem się programowaniem aplikacji biznesowych.
-Ze względu na swoją historię nauki informatyki nigdy nie miałęm okazji uczestniczyć w lekcjach elektroniki.
-Od zawsze używałem bardzo wysokich warstw abstrakcji dalego od samego sprzętu.
-Względnie niedawno odkryta fascynacja językiem rust i rewelacyjna społeczność spowodowała, że podjąłem się próby nauki na własną rękę.
+Nigdy nie miałęm okazji uczestniczyć w lekcjach elektroniki.
+Chęć nauki nowego języka - rust zachęciła mnie do wyciągnięcia z szafy zakurzonej maliny i zbudowania bardziej złożonego układu.
 
 
-Możliwość okiełznania ruchu elektronów okazała się bardzo fascynująca.
-Jest coś niesamowitego w programowaniu tak materialnych rzeczy jak ukłądy elektroniczne.
+Na początek skrócona lekcja elektroniki.
+Bardzo polecam dowolną pozycję z ćwiczeniami. Wiedza na temat tego co się dzieje i jak działa prąd zwiększy bezpieczeństwo (nasze i delikatnych układów scalonych) oraz zapewni dużo większą satysfakcję z całego procesu.
 
-
-Swoją przygodę zacząłem od nadrobienia podstawowych lekcji elektroniki.
-Bardzo polecam dowolną pozycję o elektronice. Wiedza na temat tego co się dzieje i jak działa prąd zwiększy bezpieczeństwo (nasze i delikatnych układów scalonych) oraz zapewni dużo większą satysfakcję z całego procesu.
 
 
 ## Zakupy i przygotowania...
 
-Drobna lista zakupów: 
+Na początek drobna lista zakupów: 
 
 - Raspberry pi (właściwie dowolny model, ja posiadam 2B)
 - karta pamięci zgodna z wymaganiami maliny
@@ -33,13 +34,13 @@ Drobna lista zakupów:
 - płytka stykowa
 - przewody męsko męskie
 - dioda led
-- rezystor o odpowiedniej wartości w moim przypakdu 4,7kohm
+- rezystor o odpowiedniej wartości w moim przypakdu 4,7kohm (potem zamieniony na 330)
 
 W pierwszej kolejności należy zadbać o to, żeby na karcie pamięci pojawił się zainstalowany aktualny system.
-Można podejść do tego zgodnie z (instrukcją producenta)[https://www.raspberrypi.org/documentation/installation/installing-images/].
+Można podejść do tego zgodnie z [instrukcją producenta](https://www.raspberrypi.org/documentation/installation/installing-images/).
 Podstawowe dane logowania to `pi` i hasło `raspberry`. Za pierwszym razem musimy się zalogować przy użyciu wyjścia hdmi i klawiatury fizycznej. 
-Aby umożliwić wygodną dalszą pracę w tym miejscu warto zadbać o możliwość zdalnego połączenia poprzez włączenie usługi ssh na malinie.
-Wyczerpująca instrukcja jak przejść przez ten proces dostępna jest (tutaj)[https://www.raspberrypi.org/documentation/remote-access/ssh/].
+Aby umożliwić wygodną dalszą pracę warto zadbać o możliwość zdalnego połączenia poprzez włączenie usługi ssh na malinie.
+Wyczerpująca instrukcja jak przejść przez ten proces dostępna jest [tutaj](https://www.raspberrypi.org/documentation/remote-access/ssh/).
 
 Dodatkowo zakładam, że kod napisany w rust będę uruchamiał na swoim laptopie z linuxem.
 Możliwe jest wykonanie tego samego procesu używając dowolnego systemu a nawet na samej malinie.
@@ -47,12 +48,12 @@ Wybieram model pracy z kompilacją na swoim laptopie ze względu na czas kompil
 
 Wymagane narzędzia do pracy z kodem w rust:
 
-- narzędzia do kompilacji rust, polecam instalację zgodnie z https://rustup.rs/
+- narzędzia do kompilacji rust https://rustup.rs/
 - dowolny edytor tekstu, polecam VScode z wtyczką Rust Analyzer
 - ssh i scp do połączenia zdalnego i przesłania skompilowanego projektu
 
 
-## Do dzieła
+## Czas zakasać rękawy
 
 Do maliny podłączamy taśmę gpio jak na zdjęciu:
 
@@ -93,15 +94,21 @@ python led.py
 
 Dioda powinna zacząć migać z przerwami 1 sekundy. 
 Aby przerwać program należy nacisnąć klawisze CTRL+C.
+W tym momencie dioda przestanie się palić.
 
 
 ## Ale co właściwie się stało?
 
-Aby zrozumieć co właściwie się dzieje można przeczytać kod źródłowy, [dokumentację](https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2835/BCM2835-ARM-Peripherals.pdf) albo... hmmm, zaimplementować całość ręcznie w bardzo nisko poziomowym języku (np C po raz pierwszy w życiu).
+Aby zrozumieć co właściwie się dzieje można przeczytać kod źródłowy, [dokumentację](https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2835/BCM2835-ARM-Peripherals.pdf) albo... Hmmm, zaimplementować całość ręcznie w C (po raz pierwszy w życiu).
 
-Wejście wyście ogólnego przeznaczenia - GPIO to cyfrowy interfejs komunikacji między elementami mikroprocesora a urządzeniami peryferyjnymi jak nasza dioda. Interfejs ten jest dostępny dla procesora jako adresów w pamięci.
+Wejście wyście ogólnego przeznaczenia - GPIO to cyfrowy interfejs komunikacji między elementami mikroprocesora a urządzeniami peryferyjnymi jak nasza dioda. Interfejs ten jest dostępny dla procesora jako zakres adresów w pamięci.
 
-Istnieją dwa sposoby komunikacji: poprzez `/dev/mem` (oraz bardziej bezpieczny `/dev/gpiomem`) i poprzez pseudo system plików dostarczany wraz z jądrem linuksa `sysfs`. Ostatni sposób jest bardzo prosty i polega na manipulowaniu plikami:
+Istnieją dwa sposoby komunikacji: 
+
+- `/dev/mem` (oraz bardziej bezpieczny `/dev/gpiomem`)
+- `sysfs` - pseudo system plików dostarczany wraz z jądrem linuksa  
+
+Ostatni sposób jest bardzo prosty i polega na manipulowaniu plikami:
 
 
 ```bash
@@ -111,11 +118,12 @@ echo 1 > /sys/class/gpio/gpio23/value
 echo 0 > /sys/class/gpio/gpio23/value
 ```
 
-Jądro systemu dba o wykonywanie poleceń, jednak wadą jest brak kontroli nad momentem wykonania operacji.
+Za zapalanie naszej diody odpowiada w tym przypadku kernel. Jednak wadą jest brak kontroli nad momentem wykonania operacji.
 Nie ma to wielkiego znaczenia kiedy chcemy zapalać diodę LED, ale może mieć ogromne znaczenie, jeżeli nasze układy staną się bardziej złożone i zależne od czasu.
 
-Aby sterować w naszym programie pinem GPIO użyjemy pierwszego sposobu, należy otworzyć jeden ze wskazanych plików i użyć wywołania systemowego `mmap` które spowoduje, że system odwzoruje ten plik w przestrzeni adresowej pamięci procesu.
-Plik z perspektywy naszego programu wygląda jak zwykła tablica bajtów, nie musimy wykorzystywać innych wywołań systemowych do odczytu czy zapisu.   
+Aby sterować w naszym programie pinem GPIO użyjemy pierwszego sposobu przy użyciu pliku `/dev/gpiomem`. W pierwszej kolejnośći należy otworzyć jeden ze wskazanych plików i użyć wywołania systemowego `mmap` które spowoduje, że system odwzoruje ten plik w przestrzeni adresowej pamięci procesu.
+
+Od tego momentu plik z perspektywy naszego programu wygląda jak zwykła tablica bajtów, nie musimy wykorzystywać innych wywołań systemowych do odczytu czy zapisu.   
 
 Ufff... Dużo gadania, ale czy ten super prosty skrypt pythonowy też musiał się tak męczyć? 
 Żeby to sprawdzić bez wczytywania się w dokumentację biblioteki czy kodu możemy wykorzystać system operacyjny. 
@@ -255,7 +263,7 @@ int state = (gpio[GPLEV0 / u32_offset] >> gpio_num) & 1;
 
 Jeżeli chcemy zmienić stan danego pina musimy najpierw zmienić jego tryb na wyjściowy.
 Zgodnie z dokumentacją każdy z 54 pinów posiada przynajmniej dwie funkcje. 
-Przykładowo, żeby ustawić tryb pracy pina 23 (a pozostałych na domyślną wartość 000) należy ustawić wartość rejestru `GPFSEL2` na 001
+Przykładowo, żeby ustawić tryb pracy pina 23 (a pozostałych na domyślną wartość 000) należy ustawić wartość rejestru `GPFSEL2` (rejestr dla pinów 20-29) na 001
 
 00000000000000000000**001**000000000
 
@@ -281,10 +289,11 @@ pi@raspberrypi:~ $ ./led
 
 ## Co jeżeli nie jestem wielkim fanem C?
 
+To już w sumie 3 różne sposoby na wykonywanie tej samej - mało potrzebnej czynności.
+Co jeżeli manipulowanie plikami nam nie odpowiada, nie chcemy tracić zalet rozwiązania z C a języki interpretowane zachęcają nas tak samo jak głaskanie jeża pod włos? **Pora na kolejną technologię!**
 
-Nauczyliśmy się dwóch sposobów komunikacji z naszą diodą.
-Co jeżeli nie chcemy tracić zalet C a języki interpretowane nas przerażają prawie tak samo? 
-Pora na kolejną technologię!
+{{< figure src="/images/rystypi/leds/it-crowd-gif-4.gif" class="img-lg">}}
+
 Aby rozpocząć projekt na maszynie na której chcemy budować kod należy stworzyć nowy projekt:
 
 ```bash
@@ -319,7 +328,7 @@ cargo build --target armv7-unknown-linux-gnueabihf
 
 Gotowy plik wykonywalny jest dostępny w pliku `target/armv7-unknown-linux-gnueabihf/debug/rusty_led`.
 Aby go wykonać na malinie musimy go wysłać na malinę.
-Zakładając, że znamy adres ip maliny (w moim przypadku `192.168.8.103) oraz, że skonfigurowaliśmy odpowiednie klucze prywatne i publiczne możemy go przesłać używając polecenia:
+Zakładając, że znamy adres ip maliny (w moim przypadku `192.168.8.103`) oraz, że skonfigurowaliśmy odpowiednie klucze prywatne i publiczne możemy go przesłać używając polecenia:
 
 ```bash
 # przesyłamy plik
@@ -339,7 +348,7 @@ Zeby to zrobić starczy dopisać do pliku `Cargo.toml` w sekcji `[dependencies]
 rppal = "0.11.3"
 ```
 
-A treść pliku main zamienić 
+A treść pliku `main.rs` zamienić:
 
 ```rust
 use std::error::Error;
@@ -402,7 +411,7 @@ Jeżeli zaglądniemy dokładniej w kod źródłowy biblioteki rppal to zauważym
     }
 ```
 
-Hmmm pomijając o wiele ładniejszą kontrolę błędów kod jest właściwie taki sam, wykorzystuje crate (biblioteka w środowisku rusta) libc do wywołania w bloku `unsafe` tego samego wywołania systemowego. Podobnie jest w przypadku pozostałych fragmentów, przykładowo ustawienia wartości pin:
+Hmmm pomijając o wiele ładniejszą kontrolę błędów kod jest właściwie taki sam! Wykorzystuje crate (biblioteka w środowisku rusta) `libc` do wywołania w bloku `unsafe` tego samego wywołania systemowego. Podobnie jest w przypadku pozostałych fragmentów, przykładowo ustawienia wartości pin:
 
 ```rust
     const GPSET0: usize = 0x1c / std::mem::size_of::<u32>();
@@ -417,10 +426,10 @@ Hmmm pomijając o wiele ładniejszą kontrolę błędów kod jest właściwie t
 ```
 
 
-Jest jeden problem: zachowanie naszego układu elektronicznego po wyjściu z programu jest niedeterministyczne - podobnie jak w przypadku programu w C. Przez wyjście mam na myśli naciśnięcie CTRL+C czyli wysłanie sygnału `SIGINT`.
+Jest jeden problem, zachowanie naszego układu elektronicznego po wyjściu z programu jest niedeterministyczne (podobnie jak w przypadku programu w C). Przez wyjście mam na myśli naciśnięcie CTRL+C czyli wysłanie sygnału `SIGINT`.
 Obydwa programy (C i rust) nie czyszczą w żaden sposób stanu, dioda zostaje włączona jeżeli w momencie wysłania sygnału była właśnie w takim stanie. 
 
-Czemu tak jest? Bo biblioteka w pythonie którą używaliśmy posiada taką funkcjonalność.
+Czemu tak jest? Jedynie biblioteka w pythonie którą używaliśmy posiada taką funkcjonalność.
 Fragment kodu który za nią odpowiada można znaleźć w pliku `devices.py` 
 
 ```python
@@ -441,21 +450,54 @@ def _devices_shutdown():
 ```
 
 Bardzo sympatyczna funkcjonalność tylko co jeżeli jej nie chcemy?
-Okazuje się, że nie jest to łatwe: https://github.com/gpiozero/gpiozero/issues/707 https://stackoverflow.com/questions/53618198/. 
+Okazuje się, że nie jest to łatwe, o czym można poczytać [tu](https://github.com/gpiozero/gpiozero/issues/707) czy [tu](https://stackoverflow.com/questions/53618198/).
+
+
 Co jednak jeżeli chcemy dodać podobną funkcjonalność do naszego nowego kodu w rust? 
-Zgodnie z dokumentacją https://docs.rs/rppal/0.11.3/rppal/gpio/index.html#pins pin powinien zostać przywrócony do stanu oryginalnego w momencie kiedy zgodnie z zasadami własności obiekt zostaje porzucony. 
-Co oznacza porzucenie? 
+Zgodnie z dokumentacją crate [rppal](https://docs.rs/rppal/0.11.3/rppal/gpio/index.html#pins) pin powinien zostać przywrócony do stanu oryginalnego w momencie kiedy zgodnie z zasadami własności obiekt zostaje porzucony. Ale co właściwie oznacza porzucenie? 
+
+
+Rust posiada innowacyjne podejście do zarządzania pamięcią poprzez wprowadzenie modelu własności.
+Zarządzanie pamięcią nie jest jak w przypadku C czy C++ zarządzane ręcznie przez programistę, czy jak w javie czy go przez osobny obiekt nazywany garbage collection. O momencie zwalniania pamięci decyduje zestaw reguł, które kompilator częsciowo jest w stanie wywnioskować sam na podstawie ogólnych zasad lub z użyciem parametrów przekazywanych przez programistę w nieoczywistych przypadkach.
 
 
 ```rust
-        {
-            let a = 1;
-            // obliczenia
-        } // a zostaje porzucone w tymi miejscu
+use std::thread;
+use std::time::Duration;
+
+struct HasDrop{
+    pub name: u32
+}
+
+// 
+impl Drop for HasDrop {
+    fn drop(&mut self) {
+        println!("Dropping {}", self.name);
+    }
+}
+
+fn main() {
+    {
+        let _x = HasDrop{name: 1};
+    } // _x zostaje porzucone w tym miejscu
+    let _y = HasDrop{name: 2};
+    thread::sleep(Duration::from_millis(5000));
+} // _ y w tym miejscu jeżeli wcześniej nie wysłany zostanie SIGINT
 ```
 
-Rust posiada innowacyjne podejście do zarządzania pamięcią poprzez wprowadzenie modelu własności.
-Powyższa własność daje ogromne korzyści i może być wykorzystywana również do bardzo ciekawych zastosowań, jak na przykład oddawanie połączenia do bazy danych do pooli po jego wykorzystaniu bez pisania niepotrzebnego kodu.
+
+```shell
+$ cargo -q run --example drop
+Dropping 1
+Dropping 2
+$ cargo -q run --example drop
+Dropping 1
+^C
+# po uzyskaniu SIGINT brak wpisu o wykonaniu metody drop na y
+```
+
+
+Model ten daje ogromne korzyści i może być wykorzystywana również do ciekawych zastosowań, jak na przykład oddawanie połączenia do bazy danych do pooli po jego wykorzystaniu bez pisania niepotrzebnego kodu.
 W ten sam sposób zorganizowane jest przywracanie stanu oryginalnego dla pinów w rppal:
 
 ```rust
@@ -474,9 +516,8 @@ W ten sam sposób zorganizowane jest przywracanie stanu oryginalnego dla pinów 
             }
 ```
 
-Jednak metoda drop nie jest wołana w sytuacji kiedy przyczyną wyjścia z programu był sygnał `SIGINT`.
-Czy jesteśmy w stanie coś z tym zrobić? Zgodnie z sugestią autora biblioteki musimy ręcznie obsłużyć odpowiedni sygnał:
-W pierwszej kolejności dodajemy nową bibliotekę do Cargo.toml: 
+Jednak jak udowodniliśmy wyżej metoda drop nie jest wołana w sytuacji kiedy przyczyną wyjścia z programu był sygnał `SIGINT`.
+Czy jesteśmy w stanie coś z tym zrobić? Zgodnie z sugestią autora biblioteki musimy ręcznie obsłużyć odpowiedni sygnał. W pierwszej kolejności dodajemy nową bibliotekę do Cargo.toml: 
 
 
 ```toml

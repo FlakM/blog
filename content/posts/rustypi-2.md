@@ -4,7 +4,7 @@ date: 2020-07-01T14:20:17+02:00
 draft: true
 authors: ["flakm"]
 images: ["/images/hello_world.jpg" ]
-series: ["RustyPi"]
+series: ["Rustberry PI"]
 ---
 
 

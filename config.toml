@@ -1,16 +1,52 @@
 baseURL = "https://flakm.github.io/"
-languageCode = "en-us"
-title = "FlakM's blog"
+languageCode = "pl"
+copyright = "Copyright © 2020, Maciej Flak; all rights reserved."
+footnoteReturnLinkContents = "^"
+title = "FlakM blog"
 theme = "chunky"
+enableInlineShortcodes = true
+
 
 [taxonomies]
   category = "categories"
   series = "series"
   tag = "tags"
+  author = "authors"
+  
 
+
+[menu]
+  [[menu.main]]
+    identifier = "home"
+    name = "Home"
+    url = "/"
+    weight = 10
+  [[menu.main]]
+    identifier = "about"
+    name = "O mnie"
+    url = "/about/"
+    weight = 0
 
 [params]
-share = true
+  author = "flakm"
+  description = "Blog o programowaniu"
+  homepageImage = "/images/hello_world.jpg"
+  showLanguageSwitcher = false
+  share = true
+
+  # Custom CSS and JS. Relative to /static/css and /static/js respectively.
+  customCSS = [
+    "./main.css"
+  ]
+  customJS = []
+
+  [params.social]
+    rss = true
+    email = "maciej.jan.flak@gmail.com"
+    github = "https://github.com/FlakM"
+    twitter="https://twitter.com/FlakMaciej"
+
+
   [params.prismJS]
     enable = true
     theme = "okaidia"
