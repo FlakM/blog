@@ -2,7 +2,7 @@
 title: "Część 2: zardzewiały ekran LCD"
 date: 2020-07-01T14:20:17+02:00
 draft: true
-authors: ["flakm"]
+authors: ["Maciej Flak"]
 images: ["/images/hello_world.jpg" ]
 series: ["Rustberry PI"]
 ---

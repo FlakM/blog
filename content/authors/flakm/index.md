@@ -1,7 +1,7 @@
 ---
 name: "Maciej Flak"
 images: [
-    "image.png"
+    "me.png"
 ]
 twitter: "@FlakMaciej"
 ---
