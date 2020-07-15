@@ -1,13 +1,15 @@
 baseURL = "https://flakm.github.io/"
+baseurl = "https://flakm.github.io/"
 languageCode = "pl"
 copyright = "Copyright © 2020, Maciej Flak; all rights reserved."
 footnoteReturnLinkContents = "^"
 title = "FlakM blog"
-theme = "chunky"
-enableInlineShortcodes = true
+theme = "ananke"
+enableInlineShortcodes = false
 disqusShortname = "flakm-blog"
 googleAnalytics = "UA-172669006-1"
 
+pygmentsCodeFences = true
 
 [taxonomies]
   category = "categories"
@@ -35,12 +37,11 @@ googleAnalytics = "UA-172669006-1"
   homepageImage = "/images/hello_world.jpg"
   showLanguageSwitcher = false
   share = true
-
+  show_reading_time=true
   # Custom CSS and JS. Relative to /static/css and /static/js respectively.
-  customCSS = [
-    "./main.css"
+  custom_css = [
+    "css/main.css"
   ]
-  customJS = []
 
   [params.social]
     rss = true

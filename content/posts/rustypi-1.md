@@ -10,6 +10,7 @@ images: [
     "images/rystypi/leds/it-crowd-gif-4.gif"
     
     ]
+featured_image: '/images/yannick-pipke-GtcA8mw0t1U-unsplash.jpg'
 # series: ["Rustberry PI"]
 ---
 
@@ -75,7 +76,7 @@ Pełen układ jest widoczny poniżej:
 Aby przetestować układ możemy uruchomić skrypt (na malinie):
 
 
-```bash
+```python
 cat <<EOF > led.py
 from gpiozero import LED
 
