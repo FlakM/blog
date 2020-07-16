@@ -20,9 +20,11 @@ hugo new posts/my-first-post.md
 
 Updating theme:
 
+We are using https://github.com/theNewDynamic/gohugo-theme-ananke
+
 
 ```
-
+git submodule update --remote --merge
 ```
 ## Theme
 

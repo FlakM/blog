@@ -43,6 +43,7 @@ pygmentsCodeFences = true
     "css/main.css"
   ]
 
+
   [params.social]
     rss = true
     email = "maciej.jan.flak@gmail.com"

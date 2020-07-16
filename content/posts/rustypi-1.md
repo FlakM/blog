@@ -1,5 +1,5 @@
 ---
-title: "Zardzewiała dioda"
+title: "Rustberry PI"
 date: 2020-07-01T14:13:56+02:00
 draft: false
 authors: ["Maciej Flak"]
@@ -14,19 +14,16 @@ featured_image: '/images/yannick-pipke-GtcA8mw0t1U-unsplash.jpg'
 # series: ["Rustberry PI"]
 ---
 
-Przez ostatnie kilka lat zajmowałem się programowaniem aplikacji biznesowych.
-Nigdy nie miałęm okazji uczestniczyć w lekcjach elektroniki.
-Chęć nauki nowego języka - rust zachęciła mnie do wyciągnięcia z szafy zakurzonej maliny i zbudowania bardziej złożonego układu.
 
+Pewnego pięknego dnia starając się nie pozwolić córce na zabawę starym kablem, który wyciągała z uciechą z szafy ukułem się w palec pinem z zakurzonej maliny.
+Przypomniał mi się post, który niedawno czytałem o sterowaniu z rusta [czujnikiem wilgoci i temperatury](https://citizen-stig.github.io/2020/05/17/reading-temperature-sensor-in-rust-using-raspberry-pi-gpio.html). Hmm a gdyby tak...
 
-Na początek skrócona lekcja elektroniki.
+Na początek skrócona lekcja elektroniki i prosty projekt.
 Bardzo polecam dowolną pozycję z ćwiczeniami. Wiedza na temat tego co się dzieje i jak działa prąd zwiększy bezpieczeństwo (nasze i delikatnych układów scalonych) oraz zapewni dużo większą satysfakcję z całego procesu.
-
-
 
 ## Zakupy i przygotowania...
 
-Na początek drobna lista zakupów: 
+Dalej drobna lista zakupów: 
 
 - Raspberry pi (właściwie dowolny model, ja posiadam 2B)
 - karta pamięci zgodna z wymaganiami maliny
