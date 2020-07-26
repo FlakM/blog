@@ -1,11 +1,21 @@
 ---
-title: "Rust Materialy"
+title: "Rust Materiały"
 date: 2020-07-15T13:56:16+02:00
 draft: true
+
+images: ["/images/rustypi/rustacean-flat-happy.png" ]
+
+featured_image: 'images/rustypi/rustacean-flat-happy.png'
+
+Summary: '
+Wyjątkowo wartościowe linki do nauki i nie tylko
+'
+
+tags: ["rust"]
 ---
 
-Chcę przygotować listę zasobów do których sam notorycznie sięgam przy nauce Rusta
-
+Poniżej utrzymuję listę zasobów do których sam notorycznie sięgam przy nauce rusta.
+Oprócz tego zamieszczam również rewelacyjne podcasty i blogi, które warto odwiedzić.
 
 
 
@@ -15,7 +25,7 @@ Chcę przygotować listę zasobów do których sam notorycznie sięgam przy nau
 
 1. https://doc.rust-lang.org/book/ pozycja obowiązkowa chociażby ze względu na jakość wykonania. Książka jest zorganizowana w taki sposób, żeby wprowadzać nas nie tylko w język ale też sam sprzęt na którym język działa
 2. https://github.com/rust-unofficial/awesome-rust zbiór zasobów na temat rusta
-
+3. http://www.sheshbabu.com/posts/rust-module-system/ wytłumaczenie struktury katalogów wielo modułowych projektów
 
 
 ### Blogi
@@ -28,4 +38,3 @@ Chcę przygotować listę zasobów do których sam notorycznie sięgam przy nau
 
 1. https://oxide.computer/podcast/ - nie do końca o rust ale dla miłościków komputerów i sprzętu samego w sobie
 2. https://rustacean-station.org/ - opis zmian w nowych wersjach rusta oraz co tygodniowe przedstawienie wpisu z blogu this week in rust
-
