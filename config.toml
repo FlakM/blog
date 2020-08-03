@@ -13,7 +13,7 @@ pygmentsCodeFences = true
 
 [taxonomies]
   category = "categories"
-  # series = "series"
+  series = "series"
   tag = "tags"
   author = "authors"
   
@@ -30,6 +30,11 @@ pygmentsCodeFences = true
     name = "O mnie"
     url = "/about/"
     weight = 0
+  [[menu.main]]
+    identifier = "links"
+    name = "Materiały"
+    url = "/links"
+    weight = 0    
 
 [params]
   author = "flakm"

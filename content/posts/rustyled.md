@@ -16,22 +16,23 @@ featured_image: '/images/yannick-pipke-GtcA8mw0t1U-unsplash.jpg'
 tags: ["rust", "raspberry pi"]
 
 Summary: '
-Nie krótko i nie na temat o zapalaniu diody LED przy wykorzystaniu GPIO i rusta 🦀
+Nie krótko i nie na temat o tym jak uczę się czym jest GPIO, jak się nim steruje na oraz w efekcie - jak zapalać diodę LED przy wykorzystaniu GPIO i rusta 🦀
 '
 
-# series: ["Rustberry PI"]
+series: ["raspberry pi"]
 ---
 
+{{< rusty-github >}}
 
 Pewnego pięknego dnia starając się nie pozwolić córce na zabawę starym kablem, który wyciągała z uciechą z szafy ukłułem się w palec pinem z zakurzonej maliny.
 Przypomniał mi się post, który niedawno czytałem o sterowaniu z rusta [czujnikiem wilgoci i temperatury](https://citizen-stig.github.io/2020/05/17/reading-temperature-sensor-in-rust-using-raspberry-pi-gpio.html). Hmm a gdyby tak...
 
 Na początek skrócona lekcja elektroniki i prosty projekt.
-Bardzo polecam przejście przynajmniej przez serię dobrze opisanych eksperymentów przed zabawą z maliną. Wiedza na temat tego co się dzieje i jak działa prąd zwiększy bezpieczeństwo (nasze i delikatnych układów scalonych) oraz zapewni dużo większą satysfakcję z całego procesu.
+Bardzo polecam przejście przez dowolną serię dobrze opisanych eksperymentów przed zabawą z maliną. Wiedza na temat tego co się dzieje i jak działa prąd zwiększy bezpieczeństwo (nasze i delikatnych układów scalonych) oraz zapewni dużo większą satysfakcję z całego procesu.
 
 ## Zakupy i przygotowania...
 
-Dalej drobna lista zakupów: 
+Dalej drobna lista zakupów:
 
 - Raspberry pi (właściwie dowolny model, ja posiadam 2B)
 - karta pamięci zgodna z wymaganiami maliny
@@ -44,9 +45,8 @@ Dalej drobna lista zakupów:
 
 W pierwszej kolejności należy zadbać o to, żeby na karcie pamięci pojawił się zainstalowany aktualny system.
 Można podejść do tego zgodnie z [instrukcją producenta](https://www.raspberrypi.org/documentation/installation/installing-images/).
-Podstawowe dane logowania to `pi` i hasło `raspberry`. Za pierwszym razem musimy się zalogować przy użyciu wyjścia hdmi i klawiatury fizycznej. 
-Aby umożliwić wygodną dalszą pracę warto zadbać o możliwość zdalnego połączenia poprzez włączenie usługi ssh na malinie.
-Wyczerpująca instrukcja jak przejść przez ten proces dostępna jest [tutaj](https://www.raspberrypi.org/documentation/remote-access/ssh/).
+Podstawowe dane logowania to `pi` i hasło `raspberry`. Za pierwszym razem musimy się zalogować przy użyciu wyjścia hdmi i klawiatury fizycznej.
+Aby umożliwić wygodną dalszą pracę warto zadbać o możliwość zdalnego połączenia poprzez włączenie [usługi ssh na malinie](https://www.raspberrypi.org/documentation/remote-access/ssh/).
 
 Dodatkowo zakładam, że kod napisany w rust będę uruchamiał na swoim laptopie z linuxem.
 Możliwe jest wykonanie tego samego procesu używając dowolnego systemu a nawet na samej malinie.
@@ -54,7 +54,7 @@ Wybieram model pracy z kompilacją na swoim laptopie ze względu na czas kompil
 
 Wymagane narzędzia do pracy z kodem w rust:
 
-- narzędzia do kompilacji rust https://rustup.rs/
+- narzędzia do [kompilacji rust](https://rustup.rs/)
 - dowolny edytor tekstu, polecam VScode z wtyczką Rust Analyzer
 - ssh i scp do połączenia zdalnego i przesłania skompilowanego projektu
 
@@ -73,11 +73,10 @@ Oraz na zdjęciu
 
 {{< figure src="/images/rustypi/leds/układ.jpg" class="img-sm">}}
 
-
 - **Pin GPIO23** jest połączony czerwonym przewodem z szyną dodatnią
 - **PIN GND** jest połączony z szyną ujemną
 - dioda LED (krótsza nóżka powinna być połączona z ujemną szyną)
-- rezystor o wartości 4,7Kohm 
+- rezystor o wartości 4,7K ohm (taki miałem pod ręką)
 - przewód zamykający obwód
 
 Aby przetestować układ możemy uruchomić skrypt (na malinie):
@@ -100,24 +99,22 @@ EOF
 python led.py
 ```
 
-Dioda powinna zacząć migać z przerwami 1 sekundy. 
+Dioda powinna zacząć migać z przerwami 1 sekundy.
 Aby przerwać program należy nacisnąć klawisze CTRL+C.
 W tym momencie dioda przestanie się palić.
 
-
-## Ale co właściwie się stało?
+## Ale co właściwie się stało
 
 Aby zrozumieć co właściwie się dzieje można przeczytać kod źródłowy, [dokumentację](https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2835/BCM2835-ARM-Peripherals.pdf) albo... Hmmm, zaimplementować całość ręcznie w C (po raz pierwszy w życiu).
 
 Wejście wyście ogólnego przeznaczenia - GPIO to cyfrowy interfejs komunikacji między elementami mikroprocesora a urządzeniami peryferyjnymi jak nasza dioda. Interfejs ten jest dostępny dla procesora jako zakres adresów w pamięci.
 
-Istnieją dwa sposoby komunikacji: 
+Istnieją dwa sposoby komunikacji:
 
 - `/dev/mem` (oraz bardziej bezpieczny `/dev/gpiomem`)
 - `sysfs` - pseudo system plików dostarczany wraz z jądrem linuksa  
 
 Ostatni sposób jest bardzo prosty i polega na manipulowaniu plikami:
-
 
 ```bash
 echo 23 > /sys/class/gpio/export
@@ -131,10 +128,10 @@ Nie ma to wielkiego znaczenia kiedy chcemy zapalać diodę LED, ale może mieć 
 
 Aby sterować w naszym programie pinem GPIO użyjemy pierwszego sposobu przy użyciu pliku `/dev/gpiomem`. W pierwszej kolejnośći należy otworzyć jeden ze wskazanych plików i użyć wywołania systemowego `mmap` które spowoduje, że system odwzoruje ten plik w przestrzeni adresowej pamięci procesu.
 
-Od tego momentu plik z perspektywy naszego programu wygląda jak zwykła tablica bajtów, nie musimy wykorzystywać innych wywołań systemowych do odczytu czy zapisu.   
+Od tego momentu plik z perspektywy naszego programu wygląda jak zwykła tablica bajtów, nie musimy wykorzystywać innych wywołań systemowych do odczytu czy zapisu.
 
-Ufff... Dużo gadania, ale czy ten super prosty skrypt pythonowy też musiał się tak męczyć? 
-Żeby to sprawdzić bez wczytywania się w dokumentację biblioteki czy kodu możemy wykorzystać system operacyjny. 
+Ufff... Dużo gadania, ale czy ten super prosty skrypt pythonowy też musiał się tak męczyć?
+Żeby to sprawdzić bez wczytywania się w dokumentację biblioteki czy kodu możemy wykorzystać system operacyjny.
 
 
 ```bash

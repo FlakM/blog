@@ -1,24 +1,12 @@
 ---
 title: "Rust Materiały"
-date: 2020-07-15T13:56:16+02:00
-draft: true
-
 images: ["/images/rustypi/rustacean-flat-happy.png" ]
 
 featured_image: 'images/rustypi/rustacean-flat-happy.png'
-
-Summary: '
-Wyjątkowo wartościowe linki do nauki i nie tylko
-'
-
-tags: ["rust"]
 ---
 
 Poniżej utrzymuję listę zasobów do których sam notorycznie sięgam przy nauce rusta.
 Oprócz tego zamieszczam również rewelacyjne podcasty i blogi, które warto odwiedzić.
-
-
-
 
 ### Nauka języka
 

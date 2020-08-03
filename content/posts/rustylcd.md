@@ -1,7 +1,7 @@
 ---
 title: "Rustberry PI - LCD"
 date: 2020-07-01T14:20:17+02:00
-draft: true
+draft: false
 authors: ["Maciej Flak"]
 images: [
     "/images/rustypi/lcd/20200718_204650.jpg",
@@ -18,8 +18,10 @@ Summary: '
 Uczę się podłączać i z sukcesem wyświetlić napis na wyświetlaczu LCD 2x16 znaków opartym na kontrolerze HD44780 z rustem.
 '
 
-# series: ["Rustberry PI"]
+series: ["raspberry pi"]
 ---
+
+{{< rusty-github >}}
 
 Po zapaleniu [diody LED](https://flakm.github.io/posts/rustyled/) zawsze przychodzi apetyt na więcej. W moim zestawie peryferiów do maliny kolejnym elementem był wyświetlacz LCD 2x16 znaków zgodnym z [HD44780](https://en.wikipedia.org/wiki/Hitachi_HD44780_LCD_controller).
 Pora na wyświetlenie rytualnego `Witaj świecie` na ekranie.
@@ -85,7 +87,7 @@ EOF
 python lcd.py
 ```
 
-## Dobra, dobra ale co właściwie się stało? 
+## Dobra, dobra ale co właściwie się stało?
 
 Zgodnie z dokumentacją kontrolera pierwszym krokiem który trzeba wykonać jest inicjalizacja, czyli ustawienie sposobu działania i wybranie trybu działania kontrolera. Dostępne stany to: 
 
@@ -93,7 +95,7 @@ Zgodnie z dokumentacją kontrolera pierwszym krokiem który trzeba wykonać je
 2. 4 bitowy - oczekiwanie na pierwsze 4 bity
 3. 4 bitowy - oczekiwanie na drugie 4 bity
 
-W pierwszym trybie wykorzystujemy 8 pinów GPIO do przesyłu danych i każdy z pinów podłączony jest do jednego wyjścia wyświetlacza, w drugim trybie wykorzystujemy jedynie 4 i w pierwszej kolejności wysyłamy 4 bardziej znaczące bity, pulsujemy stanem wyjścia `Enable` (tu przechodziny do stanu 3) i wysyłąmy kolejne, mniej znaczące 4 bity i pulsujemy stanem wyjścia `Enable`. Pulsowanie oznacza zmianę Ze stanu wysokiego do niskiego.
+W pierwszym trybie wykorzystujemy 8 pinów GPIO do przesyłu danych i każdy z pinów podłączony jest do jednego wyjścia wyświetlacza, w drugim trybie wykorzystujemy jedynie 4 i w pierwszej kolejności wysyłamy 4 bardziej znaczące bity, pulsujemy stanem wyjścia `Enable` (tu przechodzimy do stanu 3) i wysyłąmy kolejne, mniej znaczące 4 bity i pulsujemy stanem wyjścia `Enable`. Pulsowanie oznacza zmianę Ze stanu wysokiego do niskiego.
 
 W jaki sposób można zamodelować drobną bibliotekę, która będzie wykonywała to zadanie?
 W pierwszej kolejności należy utworzyć nowy projekt:

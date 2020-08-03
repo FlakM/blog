@@ -26,3 +26,9 @@
 
   
 .my-table tr:hover {background-color: rgba(243, 235, 235, 0.911);}
+
+
+.danger {
+  background-color: #ffdddd;
+  border-left: 6px solid #f44336;
+}
