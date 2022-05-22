@@ -1,5 +1,4 @@
 baseURL = "https://flakm.github.io/"
-baseurl = "https://flakm.github.io/"
 languageCode = "pl"
 copyright = "Copyright © 2022, Maciej Flak; all rights reserved."
 footnoteReturnLinkContents = "^"
