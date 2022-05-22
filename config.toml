@@ -1,7 +1,7 @@
 baseURL = "https://flakm.github.io/"
 baseurl = "https://flakm.github.io/"
 languageCode = "pl"
-copyright = "Copyright © 2020, Maciej Flak; all rights reserved."
+copyright = "Copyright © 2022, Maciej Flak; all rights reserved."
 footnoteReturnLinkContents = "^"
 title = "FlakM blog"
 theme = "ananke"
@@ -47,13 +47,15 @@ pygmentsCodeFences = true
   custom_css = [
     "css/main.css"
   ]
+  custom_js = [
+    "js/mini_toc.js"
+  ]
 
 
   [params.social]
     rss = true
     email = "maciej.jan.flak@gmail.com"
     github = "https://github.com/FlakM"
-    twitter="https://twitter.com/FlakMaciej"
 
 
   [params.prismJS]
@@ -62,3 +64,6 @@ pygmentsCodeFences = true
   [params.commento]
     enable = false
     url = "https://m.commento.io"
+
+[markup.goldmark.renderer]
+  unsafe = true # Allow HTML in md files

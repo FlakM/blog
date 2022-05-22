@@ -1,0 +1,11 @@
+
+div.anchor a.span {
+    display: none;
+}
+
+
+a.anchor:hover a.span {
+    display: inline;
+}
+
+

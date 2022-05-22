@@ -1,0 +1,6 @@
+{{ $anchorized := anchorize .Inner }}
+
+<h{{.Get 0}} id="{{ $anchorized }}" class="anchor-heading">
+    {{ .Inner | markdownify }}
+    <a class="anchor-link" href="#{{ $anchorized }}"><span>#</span></a>
+</h{{.Get 0}}>

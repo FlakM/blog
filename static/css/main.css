@@ -4,7 +4,7 @@
 .mw8  {  max-width: 64rem; }
 
 .w-two-thirds-l {
-    width: 100% ;
+    width: 80% ;
 }
 
 
@@ -32,3 +32,12 @@
   background-color: #ffdddd;
   border-left: 6px solid #f44336;
 }
+
+
+.hanchor { font-size: 70%; visibility: hidden}
+
+
+h1:hover a { visibility: visible}
+h2:hover a { visibility: visible}
+h3:hover a { visibility: visible}
+h4:hover a { visibility: visible}
