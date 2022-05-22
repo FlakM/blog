@@ -1,20 +1,18 @@
 name: CI
 
-on:
-  push:
-    branches: [ master ]
+  #on:
+  #  push:
+  #    branches: [ master ]
 
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-
-      - name: Update theme
-        # (Optional)If you have the theme added as submodule, you can pull it and use the most updated version
-        run: git submodule update --init --recursive
+      - uses: actions/checkout@v2
+        with:
+          submodules: true  # Fetch Hugo themes (true OR recursive)
+          fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
 
       - name: Setup hugo
         uses: peaceiris/actions-hugo@v2
@@ -22,19 +20,32 @@ jobs:
           hugo-version: "0.91.2"
           extended: true
 
-      - name: Build
-        # remove --minify tag if you do not need it
-        # docs: https://gohugo.io/hugo-pipes/minification/
+      - name: Build master
+        if: github.ref == 'refs/heads/master'
         run: HUGO_ENV=production hugo --minify
+      
+      - name: Build non master
+        if: github.ref != 'refs/heads/master'
+        run: HUGO_ENV=production hugo --minify -b https://flakm.github.io/flakm-test 
+
+      - name: Deploy test
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref != 'refs/heads/master'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          external_repository: FlakM/flakm-test
+          publish_dir: ./public
+          user_name: FlakM
+          user_email: maciej.jan.flak@gmail.com
+          publish_branch: gh-pages
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/master'
         with:
-          personal_token: ${{ secrets.TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           external_repository: FlakM/flakm.github.io
           publish_dir: ./public
-          #   keep_files: true
           user_name: FlakM
           user_email: maciej.jan.flak@gmail.com
           publish_branch: master
-        #   cname: example.com
