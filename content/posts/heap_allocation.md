@@ -1,7 +1,6 @@
 ---
 title: "Profiling heap allocation in rust"
 date: 2022-03-07T14:12:20+01:00
-draft: true
 authors: ["Maciej Flak"]
 images: [
     "/images/heap_track/markus-spiske-IiEFmIXZWSw-unsplash.jpg",
