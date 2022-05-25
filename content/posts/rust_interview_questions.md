@@ -30,26 +30,28 @@ toc: false
 
 # What is a good interview question?
 
-Taking up a completely new technology stack might be challenging.
-So is performing a good interview with a candidate.
-Below are my thoughts about this topic alongside concrete examples.
+For some time now I've been using interview questions on Reddit and SO to check my
+progress in learning Rust.
+Sadly apart from a huge will to share and teach in the community ❤️ I've also seen some ego-boosting toxicity.
+Maybe suggesting my perspective will interest you.
 
 
-I strongly believe that the main objective of technical interview
+
+I strongly believe that the main objective of a technical interview
 is determining whether you would enjoy spending
-a better part of waking hours coding, side by side while managing to
+a better part of your waking hours coding, side by side while managing to
 create immense value.
 
 
 The **good interview** questions should:
 
-1. Check ability to think outside the box
+1. Check the ability to think outside the box
 2. Invite discussion and cooperation
 3. Check deep understanding of key concepts
-4. Check ability to communicate tricky parts of the technology
+4. Check the ability to communicate tricky parts of the technology
 5. Check formal knowledge of the domain
 
-I believe that we can focus too much on single objective (mainly #6)
+I believe that we can focus too much on a single objective (mainly #5)
 while ignoring the rest.
 
 
@@ -58,35 +60,35 @@ while ignoring the rest.
 {{< toc >}}
 
 
-## Checking creativity (non rust specific)
+## Checking creativity (non-rust specific)
 
 Here are some awesome questions that may inspire you:
 
 1. How would you QA the light inside the fridge?
 2. How could you explain what docker does without words: `container`,
-   `isolation` and `virtual`?
+   `isolation`, and `virtual`?
 3. How can you track the movements of the snail over time?
 4. What was the most awkward technical decision you have ever made?
-5. During yearly international race of race pandas, as an embedded developer what kind of a smart device
-   would you prepare for your favourite one to make it win?
-6. What features can a smart tea spoon have?
+5. During the yearly international race of pandas, as an embedded developer what kind of a smart device
+   would you prepare for your favorite one to make it win?
+6. What features can a smart teaspoon have?
 
 
 ## Key concepts of rust
 
-Those are the most important topics that a technology touches.
+Those are the most important topics that technology touches on.
 Understanding those concepts is probably required to describe all other
-topics. They might introduce followup questions and discussions.
+topics. They might introduce follow-up questions and discussions.
 Possible followups:
 
 - Why do you think this feature is important?
-- What are alternatives solutions (maybe other languages)? 
+- What are alternative solutions (maybe other languages)? 
 - Could you describe where this concept was very helpful? 
 
 ### What does ownership mean in rust?
 
-Set of rules defining how rust program manages memory.
-They are checked during compilation and they allow compiler to add
+Set of rules defining how the rust program manages memory.
+They are checked during compilation and they allow the compiler to add
 code that [frees](https://doc.rust-lang.org/std/ops/trait.Drop.html) no longer used regions of memory.
 
 The rules are:
@@ -101,7 +103,7 @@ The rules are:
 
 ### What does borrow do in rust?
 
-More often then not we want to access some value without taking the
+More often than not we want to access some value without taking the
 ownership. Rust allows us to do this safely using borrowing (during the
 compilation the borrow checker tests if all rules are obeyed).
 
@@ -135,17 +137,17 @@ where
 }
 ```
 
-`spawn` creates new thread using provided closure that has lifetime
+`spawn` creates a new thread using provided closure that has lifetime
 `'static` so it has no other dependencies to borrowed values and might
-live until the end of the program and it returns value of type `T` that
+live until the end of the program and it returns the value of type `T` that
 is also `'static`. 
 
 
 The `'static` lifetime is required due to how threads work. The spawned thread might
 outlive the calling call so it needs to own all the data.
 
-The `Send` trait means that provided closure `f` of type `F` and it's return value `T`
-are safe to send to another thread.
+The `Send` trait means that provided closure `f` of type `F` and its return value `T`
+is safe to send to another thread.
 
 **Resources:**
 - [Rust-lang docs: spawn](https://doc.rust-lang.org/std/thread/fn.spawn.html)
@@ -162,7 +164,7 @@ topics specific to rust.
 ### Whats the difference between `String` vs `&str`?
 
 `String` is UTF-8 encoded dynamic owned string type backed by heap allocation.
-`str` otherwise called string slice is immutable and borrowed sequence
+`str` otherwise called string slice is an immutable and borrowed sequence
 of UTF-8 encoded bytes. Since `str` size is unknown (its DST) it can be
 handled via reference `&str` (this type consists of a `pointer` and a `len`).
 `str` can point to either heap, static storage (binary code loaded into
@@ -172,19 +174,18 @@ memory) or stack (ie created from slice of bytes)
 **Resources:**
 
 - [Stackoverflow - short answer](https://stackoverflow.com/questions/24158114/what-are-the-differences-between-rusts-string-and-str)
-- [Faster then lime awesome article](https://fasterthanli.me/articles/working-with-strings-in-rust)
+- [Faster than lime awesome article](https://fasterthanli.me/articles/working-with-strings-in-rust)
 - [DST](https://doc.rust-lang.org/reference/dynamically-sized-types.html)
 
 ### Describe the `async` keyword in rust
 
-`async` keyword can change `fn`, `closure` or `block` into [Future](https://doc.rust-lang.org/std/future/trait.Future.html).
-The `Future` represents asynchronous computation: so one not performed
-by blocking the current caller but allowing to obtain those results some
-time in the future. 
+The `async` keyword can change `fn`, `closure` or `block` into [Future](https://doc.rust-lang.org/std/future/trait.Future.html).
+The `Future` represents asynchronous computation: so one is not performed
+by blocking the current caller but by allowing to obtain those results sometime in the future. 
 
 
 Rust does not ship any async runtime in `std` by default. It only
-specifies interfaces that can be brought by using separate crate like
+specifies interfaces that can be brought by using a separate crate like
 `tokio` or `async-std`
 
 The async feature plays [very nice](https://rust-lang.github.io/async-book/02_execution/05_io.html)
@@ -199,9 +200,9 @@ operations.
 
 ### Describe the `std`
 
-`std` is a crate that provides most common abstractions for regular
-program that uses platform support for certain features (io,
-concurrency).
+`std` is a crate that provides the most common abstractions for a regular
+program that uses platform support for certain features (`io`,
+`concurrency`).
 
 
 The most commonly used types from `std` like `Box`, `Option`, `String` or `Vec`
@@ -210,10 +211,10 @@ are imported by a compiler for each program using
 
 
 `std` also provides small [runtime](https://github.com/rust-lang/rust/blob/master/library/std/src/rt.rs)
-that initializes the environment before running user's `main` function. 
-For instance on unix systems it
+that initializes the environment before running the user's `main` function. 
+For instance, on unix systems it
 [casts some dark spells](https://github.com/rust-lang/rust/blob/master/library/std/src/sys/unix/mod.rs)
-for standard file descriptors (0-2) to actually be sure they are there. 
+for standard file descriptors (0-2) to be sure they are there. 
 
 
 It is perfectly valid in certain scenarios (embedded or wasm) to not use 
@@ -227,7 +228,7 @@ features like heap allocations or collections by using custom allocators.
 
 ## Formal knowledge of the domain
 
-Those questions are sometimes domain specific (FFI is not used by
+Those questions are sometimes domain-specific (FFI is not used by
 every project nor is unsafe rust) but the knowledge and ability to
 describe the background is very important. 
 
@@ -275,12 +276,12 @@ Alternative questions:
 
 Monomorphization is used to solve at compile time concrete types for all
 of the generics before they are called. Rust generates separate copies
-of assembly for each type, so they have their own address in resulting
+of assembly for each type, so they have their own address in the resulting
 binary.
 
 
-Alternative solution is using dynamic dispatch with `dyn trait` where
-each implementation reference is stored in vtable so there is only
+An alternative solution is using dynamic dispatch with `dyn trait` where
+each implementation reference is stored in vtable so there is an only a
 single implementation of function that looks up specific implementation
 for generics types using vtable.
 
@@ -314,7 +315,7 @@ impl Multiplier for Doubler {
 }
 ```
 
-Resources:
+**Resources:**
 - [Rust for rustaceans chap 2 Compilation and dispatch](https://nostarch.com/rust-rustaceans)
 - [rustc dev guide](https://rustc-dev-guide.rust-lang.org/backend/monomorph.html)
 
@@ -334,7 +335,8 @@ crate type (or `cdylib` if its to be used by other c code).
 
 Also some crates ship with dynamic dependencies (ie `openssl`)
 
-Resources:
+**Resources:**
+
  - [Discussion](https://gankra.github.io/blah/swift-abi/#what-is-abi-stability-and-dynamic-linking)
  - [Discussion 2](https://www.reddit.com/r/rust/comments/us328s/can_someone_from_the_rust_community_share_their/)
 
@@ -343,11 +345,11 @@ Resources:
 Be sure to be **respectful** - on either side.
 
 
-Apart from domain knowledge try to check/present **creativity**, ability
-to **express thought process** of interviewer.
+Apart from domain knowledge try to check/present **creativity** and ability
+to **express thought processes**.
 
 
-Whole experience should feel like group of old friends having a good chat about compilers and 
+The whole experience should feel like a group of old friends having a good chat about compilers and 
 GNU/Linux with a cup of coffee or a nice pint of craft beer.
 [It's chaos, be kind!](https://www.youtube.com/watch?v=sicUhD1n-es)
 

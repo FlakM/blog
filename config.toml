@@ -26,18 +26,18 @@ pygmentsCodeFences = true
     weight = 10
   [[menu.main]]
     identifier = "about"
-    name = "O mnie"
+    name = "About me"
     url = "/about/"
     weight = 0
-  [[menu.main]]
-    identifier = "links"
-    name = "Materiały"
-    url = "/links"
-    weight = 0    
+#  [[menu.main]]
+#    identifier = "links"
+#    name = "Materiały"
+#    url = "/links"
+#    weight = 0    
 
 [params]
   author = "flakm"
-  description = "Blog o programowaniu"
+  description = "Simple coder blog"
   homepageImage = "/images/hello_world.jpg"
   showLanguageSwitcher = false
   share = true
@@ -46,23 +46,20 @@ pygmentsCodeFences = true
   custom_css = [
     "css/main.css"
   ]
-  custom_js = [
-    "js/mini_toc.js"
-  ]
 
 
-  [params.social]
-    rss = true
-    email = "maciej.jan.flak@gmail.com"
-    github = "https://github.com/FlakM"
+[[params.ananke_socials]]
+    name = "github"
+    url = "https://github.com/FlakM"
 
 
-  [params.prismJS]
-    enable = true
-    theme = "okaidia"
-  [params.commento]
-    enable = false
-    url = "https://m.commento.io"
+
+[params.prismJS]
+  enable = true
+  theme = "okaidia"
+[params.commento]
+  enable = false
+  url = "https://m.commento.io"
 
 [markup.goldmark.renderer]
   unsafe = true # Allow HTML in md files
