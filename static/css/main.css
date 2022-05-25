@@ -1,17 +1,51 @@
 /* put conde here */
 
-
-.mw8  {  max-width: 64rem; }
-
-.w-two-thirds-l {
-    width: 80% ;
-}
-
-
 .bg-top {
     background-position: center;
 }
 
+
+@media only screen and (min-width: 1000px) {
+.mw8 {
+  max-width: 50vw;
+}
+
+pre {
+  width: 70vw;
+  position: relative;
+  left: 10%;
+  right: 10%;
+  margin-left: -15vw;
+  margin-right: -15vw; 
+}
+
+.img-lg {
+  width: 70vw;
+  position: relative;
+  left: 10%;
+  right: 10%;
+  margin-left: -15vw;
+  margin-right: -15vw; 
+}
+}
+
+pre {
+    margin-top: 2em;
+    margin-bottom: 2em;
+}
+
+.img-lg {
+    margin-top: 2em;
+    margin-bottom: 2em;
+}
+
+aside {
+    visibility: hidden;
+}
+
+.w-two-thirds-l {
+  width: 100%;
+}
 
 .my-table table {
     border-collapse: collapse;

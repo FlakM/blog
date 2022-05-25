@@ -1,24 +1,23 @@
 ---
-title: "O mnie"
+title: "About me"
 images: ["images/me.png", "images/atm.png"]
 featured_image: 'images/me.png'
 ---
 
-Hej, nazywam się Maciek i jestem programistą od 2015 roku.
-Przez pierwsze lata pracowałem w dużej instytucji finansowej, a następnie w mniejszym start upie o zdecydowanie lżejszym podejściu do technologii.
+Hey, my name is Maciek and I'm a programmer since 2015.
+I've gotten the chance to work in a large corporation and a small start-up.
+
+I've found out that I want to look at terminals a lot during a completely
+unrelated major in finance. I've managed to finish both of them but out
+of pure decency (coding was more fun I guess).
 
 
-Informatykę odkryłem bardzo późno - jako drugi kierunek studiów.
-Szybko okazało się, że pierwszy kierunek - finanse kończę tylko z przyzwoitości. 
+As for technologies: I've been coding in scala but got to use a lot of
+technologies like docker, other languages, networking, etc.
+For a couple of years, I've become more and more fascinated with FOSS,
+Linux and recently Rust. 
 
 
-Zawodowo zajmowałem się tworzeniem i wdrażaniem (czasem głównie to) systemów napisanych głównie w javie (ogólnie JVM).
-Praca przy dużym, krytycznym, wysokodostępnym i rozproszonym systemie spowodowała, że szybko zacząłem widzieć mnogość problemów, z którymi na codzień walczymy. 
-
-{{< figure src="/images/atm.png" class="img-md">}}
-
-Zainteresowanie zmieniło się  w fascynację i tak trafiłem na `scalę`, `akkę`, `docker` i tym podobne gorące słowa.
+{{< figure src="/images/atm.png" class="img-md" caption="Testing after release...">}}
 
 
-Od jakiegoś czasu natomiast wieczorami i nocami moja uwaga skierowała się w kierunku bardziej niskopoziomowych języków.
-Stąd fascynacja rustem i dużo odkryć, które w pewnym momencie zacząłem spisywać.
