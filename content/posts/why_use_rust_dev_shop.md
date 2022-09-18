@@ -1,7 +1,7 @@
 ---
 title: "Difficult case of pitching rust - web shop"
 date: 2022-09-18T14:12:20+01:00
-draft: true
+draft: false
 authors: ["Maciej Flak"]
 images: [
     "/images/scales.jpg",
