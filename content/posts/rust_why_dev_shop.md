@@ -1,6 +1,6 @@
 ---
-title: "Difficult case of pitching rust - web shop"
-date: 2022-09-18T14:12:20+01:00
+title: "Difficult case of pitching rust in a web shop"
+date: 2022-09-18T12:12:24+02:00
 draft: false
 authors: ["Maciej Flak"]
 images: [

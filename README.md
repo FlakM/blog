@@ -23,3 +23,9 @@ Updating theme:
 
 Blog is using [ananke theme](https://github.com/theNewDynamic/gohugo-theme-ananke)
 
+
+## CI/CD 
+
+Each CI job deploys code to flakm-test repository available under: https://flakm.github.io/flakm-test/
+
+Master branch is deployed to https://flakm.github.io/
