@@ -6,7 +6,7 @@ title = "FlakM blog"
 theme = "ananke"
 enableInlineShortcodes = false
 disqusShortname = "flakm-blog"
-googleAnalytics = "316704670"
+googleAnalytics = "G-3TLSQC3STQ"
 
 pygmentsCodeFences = true
 
