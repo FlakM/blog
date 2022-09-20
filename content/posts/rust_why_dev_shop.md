@@ -22,7 +22,6 @@ toc: false
 I crave working with rust. [So do many other people](https://survey.stackoverflow.co/2022/#most-loved-dreaded-and-wanted-language-love-dread).
 I wrote down my thoughts because I know I'm biased.
 
-
 I want like to tell a story of a fictional **middle-sized web development company**.
 They use high-level, battle-tested technologies JVM, c#, go, ruby, or python.
 

@@ -6,7 +6,7 @@ title = "FlakM blog"
 theme = "ananke"
 enableInlineShortcodes = false
 disqusShortname = "flakm-blog"
-googleAnalytics = "UA-172669006-1"
+googleAnalytics = "316704670"
 
 pygmentsCodeFences = true
 
@@ -57,9 +57,6 @@ pygmentsCodeFences = true
 [params.prismJS]
   enable = true
   theme = "okaidia"
-[params.commento]
-  enable = false
-  url = "https://m.commento.io"
 
 [markup.goldmark.renderer]
   unsafe = true # Allow HTML in md files
