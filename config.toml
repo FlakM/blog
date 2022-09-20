@@ -53,7 +53,6 @@ pygmentsCodeFences = true
     url = "https://github.com/FlakM"
 
 
-
 [params.prismJS]
   enable = true
   theme = "okaidia"
