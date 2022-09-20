@@ -29,7 +29,7 @@ They follow all the industry standards like code review, CI/CD, feature
 flags, and automated security scans...
 But an essential piece of the puzzle:
 
-> **a successful product, active users, and actual revenue**
+> **successful product, active users, and actual revenue**
 
 With this context in mind, let's look at rust's selling points.
 
