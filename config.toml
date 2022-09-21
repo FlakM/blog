@@ -5,7 +5,6 @@ footnoteReturnLinkContents = "^"
 title = "FlakM blog"
 theme = "ananke"
 enableInlineShortcodes = false
-disqusShortname = "flakm-blog"
 googleAnalytics = "G-3TLSQC3STQ"
 
 pygmentsCodeFences = true
@@ -15,7 +14,6 @@ pygmentsCodeFences = true
   series = "series"
   tag = "tags"
   author = "authors"
-  
 
 
 [menu]
@@ -29,11 +27,6 @@ pygmentsCodeFences = true
     name = "About me"
     url = "/about/"
     weight = 0
-#  [[menu.main]]
-#    identifier = "links"
-#    name = "Materiały"
-#    url = "/links"
-#    weight = 0    
 
 [params]
   author = "flakm"
