@@ -5,7 +5,7 @@ footnoteReturnLinkContents = "^"
 title = "FlakM blog"
 theme = "ananke"
 enableInlineShortcodes = false
-googleAnalytics = "G-3TLSQC3STQ"
+#googleAnalytics = "G-3TLSQC3STQ"
 
 pygmentsCodeFences = true
 
