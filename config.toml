@@ -39,6 +39,8 @@ pygmentsCodeFences = true
   custom_css = [
     "css/main.css"
   ]
+  # Google Analytics 4
+  googleAnalyticsID = "G-3TLSQC3STQ"
 
 
 [[params.ananke_socials]]
