@@ -5,7 +5,7 @@ footnoteReturnLinkContents = "^"
 title = "FlakM blog"
 theme = "ananke"
 enableInlineShortcodes = false
-#googleAnalytics = "G-N15984W8V7"
+googleAnalytics = "UA-172669006-1"
 
 pygmentsCodeFences = true
 
@@ -39,8 +39,6 @@ pygmentsCodeFences = true
   custom_css = [
     "css/main.css"
   ]
-  # Google Analytics 4
-  googleAnalyticsID = "G-N15984W8V7"
 
 
 [[params.ananke_socials]]
