@@ -144,7 +144,9 @@ is also `'static`.
 
 
 The `'static` lifetime is required due to how threads work. The spawned thread might
-outlive the calling call so it needs to own all the data.
+outlive the calling scope or thread, so it may only access unowned data which is 
+explicitly marked as having the same [lifetime](https://doc.rust-lang.org/rust-by-example/scope/lifetime/static_lifetime.html) 
+as the process.
 
 The `Send` trait means that provided closure `f` of type `F` and its return value `T`
 is safe to send to another thread.
