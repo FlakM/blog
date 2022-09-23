@@ -145,8 +145,7 @@ is also `'static`.
 
 The `'static` lifetime is required due to how threads work. The spawned thread might
 outlive the calling scope or thread, so it may only access unowned data which is 
-explicitly marked as having the same [lifetime](https://doc.rust-lang.org/rust-by-example/scope/lifetime/static_lifetime.html) 
-as the process.
+explicitly marked as having the same lifetime as the process.
 
 The `Send` trait means that provided closure `f` of type `F` and its return value `T`
 is safe to send to another thread.
@@ -154,6 +153,7 @@ is safe to send to another thread.
 **Resources:**
 - [Rust-lang docs: spawn](https://doc.rust-lang.org/std/thread/fn.spawn.html)
 - [Thread definition](https://en.wikipedia.org/wiki/Thread_(computing))
+- [Rust-lang docs: static](https://doc.rust-lang.org/rust-by-example/scope/lifetime/static_lifetime.html)
 - [Rust-lang docs: FnOnce](https://doc.rust-lang.org/std/ops/trait.FnOnce.html)
 
 
