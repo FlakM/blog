@@ -12,7 +12,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system;};
-      in {
+      in rec {
 
       packages.default = pkgs.stdenv.mkDerivation {
         pname = "static-website";
@@ -22,6 +22,10 @@
         buildPhase = "mkdir -p themes/ananke/ && cp -r ${ananke}/* themes/ananke/ && ls -al themes && HUGO_ENV=production hugo --minify";
         installPhase = "cp -r public $out";
         submodules = [ ananke ];
+      };
+      
+      apps.default = flake-utils.lib.mkapp {
+        drv = packages.default;
       };
 
 
