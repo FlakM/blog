@@ -4,7 +4,7 @@
     flake-utils.url = "github:numtide/flake-utils";
     ananke = {
       url = "github:FlakM/gohugo-theme-ananke";
-      flake = false;
+      flake = true;
     };
   };
   
@@ -13,7 +13,6 @@
       let
         pkgs = import nixpkgs { inherit system;};
       in {
-
 
       packages.default = pkgs.stdenv.mkDerivation {
         pname = "static-website";
