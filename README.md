@@ -4,7 +4,7 @@ Installation
 
 ```bash
 git submodule update --init --recursive
-nix-shell -p '(import <nixos-unstable> {}).hugo'
+nix-shell -p hugo
 ```
 
 Running server
