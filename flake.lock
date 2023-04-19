@@ -1,21 +1,5 @@
 {
   "nodes": {
-    "ananke": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1663736855,
-        "narHash": "sha256-dbYY0C8U2SzBFgllyuxa6f42GdbABL+c6iwz6wjvSjw=",
-        "owner": "FlakM",
-        "repo": "gohugo-theme-ananke",
-        "rev": "49caa64d7ce80e8d6d1d4e7385ab23f575af4171",
-        "type": "github"
-      },
-      "original": {
-        "owner": "FlakM",
-        "repo": "gohugo-theme-ananke",
-        "type": "github"
-      }
-    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -52,9 +36,9 @@
     },
     "root": {
       "inputs": {
-        "ananke": "ananke",
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "theme": "theme"
       }
     },
     "systems": {
@@ -69,6 +53,22 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "theme": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1681003331,
+        "narHash": "sha256-SPYTWx9H0Y16ZEuoJcHXrq7Owe7QaR4/NmcOKx6kFYk=",
+        "owner": "luizdepra",
+        "repo": "hugo-coder",
+        "rev": "d336b3cc3a65adafb5bcc436806fe22ce4117e94",
+        "type": "github"
+      },
+      "original": {
+        "owner": "luizdepra",
+        "repo": "hugo-coder",
         "type": "github"
       }
     }

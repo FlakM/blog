@@ -3,7 +3,7 @@ title: "Consuming the flake"
 date: 2023-04-06T20:58:49+02:00
 draft: true
 
-series: ["The perfect deployment"]
+series: ["Breeding cobras"]
 
 Summary: '
 Example of how a flake module should be tested

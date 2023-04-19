@@ -3,7 +3,7 @@ title: "Provisioning resources"
 date: 2023-04-07T14:55:28+02:00
 draft: true
 
-series: ["The perfect deployment"]
+series: ["Breeding cobras"]
 
 Summary: '
 How to provision EC2 machine with valid DNS record

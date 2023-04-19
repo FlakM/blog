@@ -1,13 +1,19 @@
-baseURL = "https://flakm.github.io/"
-languageCode = "pl"
-copyright = "Copyright © 2022, Maciej Flak; all rights reserved."
-footnoteReturnLinkContents = "^"
-title = "FlakM blog"
-theme = "ananke"
-enableInlineShortcodes = false
-googleAnalytics = "UA-172669006-1"
+baseURL = "https://flakm.com/"
+languageCode = "en"
+defaultContentLanguage = "en"
 
-pygmentsCodeFences = true
+copyright = "Copyright © 2023, Maciej Flak; all rights reserved."
+
+title = "FlakM blog"
+theme = "hugo-coder"
+googleAnalytics = "G-3TLSQC3STQ"
+
+paginate = 20
+enableEmoji = true
+
+
+[markup.highlight]
+style = "github-dark"
 
 [taxonomies]
   category = "categories"
@@ -15,40 +21,52 @@ pygmentsCodeFences = true
   tag = "tags"
   author = "authors"
 
+# Menu links
+[[menu.main]]
+  name = "Blog"
+  weight = 1
+  url  = "posts/"
+[[menu.main]]
+  name = "Series"
+  weight = 2
+  url  = "series/"
+[[menu.main]]
+  name = "About"
+  weight = 3
+  url = "about/"
 
-[menu]
-  [[menu.main]]
-    identifier = "home"
-    name = "Home"
-    url = "/"
-    weight = 10
-  [[menu.main]]
-    identifier = "about"
-    name = "About me"
-    url = "/about/"
-    weight = 0
 
 [params]
-  author = "flakm"
+  author = "Maciej Flak"
+  info = "Husband, father of two, linux and foss enthusiast, rust dev, gravel cycling amateur"
   description = "Simple coder blog"
-  homepageImage = "/images/hello_world.jpg"
-  showLanguageSwitcher = false
-  share = true
-  show_reading_time=true
+  keywords = "blog,developer,personal"
+  avatarurl = "images/avatar.jpg"
+
+  favicon_32 = "static/favicon.png"
+  favicon = "static/favicon.png"
+
+  colorScheme = "auto"
+  hidecolorschemetoggle = false
   # Custom CSS and JS. Relative to /static/css and /static/js respectively.
   custom_css = [
     "css/main.css"
   ]
 
-
-[[params.ananke_socials]]
-    name = "github"
-    url = "https://github.com/FlakM"
+  
 
 
-[params.prismJS]
-  enable = true
-  theme = "okaidia"
+[[params.social]]
+    name = "Github"
+    icon = "fa fa-github"
+    weight = 1
+    url = "https://github.com/johndoe/"
 
-[markup.goldmark.renderer]
-  unsafe = true # Allow HTML in md files
+[[params.social]]
+    name = "Mastodon"
+    icon = "fa fa-mastodon"
+    weight = 2
+    url = "https://hachyderm.io/@flakm"
+    rel = "me noopener"
+
+

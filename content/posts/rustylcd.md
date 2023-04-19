@@ -18,7 +18,6 @@ Summary: '
 Uczę się podłączać i z sukcesem wyświetlić napis na wyświetlaczu LCD 2x16 znaków opartym na kontrolerze HD44780 z rustem.
 '
 
-series: ["raspberry pi"]
 ---
 
 {{< rusty-github >}}

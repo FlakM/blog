@@ -15,7 +15,6 @@ tags: ["rust", "raspberry pi"]
 Summary: '
 Uczę się obsługiwać czujnik wilgoci i temperatury DHT11 z użyciem rust i prezentuję wyników na ekranie lcd używając biblioteki zbudowanej w poprzednim wpisie
 '
-series: ["raspberry pi"]
 ---
 
 {{< rusty-github >}}

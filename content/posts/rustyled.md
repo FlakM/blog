@@ -19,7 +19,6 @@ Summary: '
 Nie krótko i nie na temat o tym jak uczę się czym jest GPIO, jak się nim steruje na oraz w efekcie - jak zapalać diodę LED przy wykorzystaniu GPIO i rusta 🦀
 '
 
-series: ["raspberry pi"]
 ---
 
 {{< rusty-github >}}
