@@ -371,7 +371,3 @@ TODO:
  - Associated types vs generics 
 !-->
 
-{{< unsafe >}}
-Photo by <a href="https://unsplash.com/@hanzife?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">hʌnzife</a> on <a href="https://unsplash.com/s/photos/crab?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">Unsplash</a>
-{{< /unsafe >}}
-

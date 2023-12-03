@@ -37,14 +37,15 @@ style = "github-dark"
 
 
 [params]
-  author = "Maciej Flak"
-  info = "Husband, father of two, linux and foss enthusiast, rust dev, gravel cycling amateur"
+  author = "Maciek Flak"
+  info = "Minimalist, Husband, Dad, Rust coder, Linux & FOSS enthusiast"
   description = "Simple coder blog"
   keywords = "blog,developer,personal"
   avatarurl = "images/avatar.jpg"
 
-  favicon_32 = "static/favicon.png"
-  favicon = "static/favicon.png"
+  dateFormat = "January 2, 2006"
+
+  favicon = "images/favicon.ico"
 
   colorScheme = "auto"
   hidecolorschemetoggle = false
