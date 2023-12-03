@@ -29,50 +29,33 @@ To host the code I'll need two things:
 
 The server should be reachable for ssh (at least at the beginning) and have port 443 opened and a valid TLS certificate.
 
-Since I heavily believe in self-documentation I have used `opentofu` for preparing the deployment.
-I want to be able to redo the same setup and easily apply modifications without forgetting about one of the manual commands.
-
-Since I'm more dev than ops. My requirements were the following: 
-
-- There should be already some tutorials that I can start from
-- The whole infrastructure should be provisioned by single command
-- The solution should be fully automated
-
-### Prerequisites
-
-I've used the amazing wiki article [Deploying NixOS using Terraform](https://nix.dev/tutorials/deploying-nixos-using-terraform) as a base even though it's somehow dated.
-To use the same configuration you will need the following things:
+Since [native support for NixOs on major cloud providers](https://nixos.wiki/wiki/NixOS_friendly_hosters) is lacking I've used amazing project [nixos-anywhere](https://github.com/nix-community/nixos-anywhere) in conjuction with `tofu` server provisioning code taken straight from examples for ptovider.
+Prerequisites for provisioning the instance are:
 
 1. [Hetzner API token](https://docs.hetzner.com/cloud/api/getting-started/generating-api-token/)
 2. [Cloudflare account and token](https://www.cloudflare.com/) 
-3. DNS domain managed by CF
+3. DNS domain managed by CF (`flakm.com` in my case)
 
 ### Environment setup
 
 
 I'm using a [yubikey smart card with gpg agent for ssh authentication](https://github.com/drduh/YubiKey-Guide#configure-smartcard) and my public key is located in `~/.ssh/id_rsa_yubikey.pub`.
 
-I like this setup, the key never touched the disk on my computer. But there is no problem if you don't have one you might just use plain ssh keys:
+I like this setup, the key never touched the disk on my computer. But there is no problem if you don't have one you might just use plain ssh keys.
 
-```bash
-# full resources: https://developers.yubico.com/PIV/Guides/Generating_keys_using_OpenSSL.html
-openssl genrsa -out key.pem 2048
-# extract public part
-openssl rsa -in key.pem -outform PEM -pubout -out public.pem
-```
-
-Once you have all the other prerequisites setup you will need the following setup:
+Once you have all the other prerequisites setup you will need the following environment variables:
 
 ```bash
 export CLOUDFLARE_API_TOKEN="..." # account token
 export HCLOUD_TOKEN="" # Hetzner API token
+export TF_VAR_ZONE_ID="" # Cloud flare zone id
 ```
 
 ## 🚢 to ☁️ 
 
 ### Provisioning
 
-The aggregating flake.nix alongside `opentofu` module is in [repository](https://github.com/FlakM/blog_deployment). Here is the complete terraform deployment definition:
+Here is the complete terraform deployment definition:
 
 ```terraform
 terraform {
@@ -181,15 +164,14 @@ module "install" {
 }
 ```
 
-To run it you will have to setup your environment. The flake in project's repository contains `devShell` section that provides the binaries required to run it.
-If you have [direnv integration](https://nixos.wiki/wiki/Flakes#Direnv_integration) setup you will just need to run following command:
+To run it you will have to first setup your environment. The flake in project's repository contains `devShell` section that provides the binaries required to run it.
+If you have [direnv integration](https://nixos.wiki/wiki/Flakes#Direnv_integration) one time setup you will just need to run following command:
 
 ```bash
 direnv allow
 ```
 
-And your shell will magically receive all the required binaries (tofu).
-To deploy the code run:
+And your shell will magically receive all the required binaries. To deploy the code run:
 
 
 ```bash
@@ -197,7 +179,7 @@ tofu init # downloads the providers
 tofu apply
 ```
 
-At this point after couple of minutes you should be able to check the DNS adress.
+At this point after couple of minutes you should be able to check the DNS address.
 It should point to valid ip address of the machine that you have just created:
 
 ```bash
