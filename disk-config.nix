@@ -1,4 +1,6 @@
 # Example to create a bios compatible gpt partition
+# Taken from nixos anywhere project documentation
+# Available at https://github.com/nix-community/nixos-anywhere/blob/73a6d3fef4c5b4ab9e4ac868f468ec8f9436afa7/docs/quickstart.md
 { lib, ... }:
 {
   disko.devices = {
