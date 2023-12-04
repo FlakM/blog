@@ -1,7 +1,7 @@
 ---
 title: "Screaming at the clouds ☁️"
-date: 2023-04-07T14:55:28+02:00
-draft: true
+date: 2023-12-04T15:00:00+02:00
+draft: false
 
 series: ["Perfect simple deployment"]
 
@@ -295,57 +295,63 @@ We are ready to use nix!
 ## NixOs deployment
 
 So now we want to add our rust backend to the host.
-
-We need to add new input for now pointing to specific commit and define NixOs configuration called `blog`.
-It inherits `system` so in our case - value `"x86_64-linux"`, passes `specialArgs` and finally import a module from file config.nix  which contains our system configuration.
-
+We can add new flake input that points to our backend and configure the service:
 
 ```nix
 # flake.nix
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    ...
+    # 🆕👇 Add the backend flake as an input 
     backend = {
-      url = "github:FlakM/backend/7a09966d9d6218a7f76f6cd38f52c84758fcf7a5";
+      url = "path:./backend"; # Points to the flake in the backend directory
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
-
-  outputs = { self, nixpkgs, flake-utils, ... }@attrs:
+  #                           🆕👇
+  outputs = { nixpkgs, disko, backend, ... }@attrs:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
     in
     {
-      formatter.${system} = pkgs.nixpkgs-fmt;
+
+      # NixOS configuration for the 'blog' system
       nixosConfigurations.blog = nixpkgs.lib.nixosSystem {
         inherit system;
+        #🆕👇
         specialArgs = attrs;
-        modules = [ ./configuration.nix ];
-      };
-
-
-      devShell.x86_64-linux = pkgs.mkShell {
-        buildInputs = with pkgs; [
-          terraform
-          awscli2
+        modules = [
+          disko.nixosModules.disko # Include disko module
+          ./configuration.nix # Include custom configuration
         ];
       };
+
+      #🆕👇
+      # Merge the checks from the backend flake into the root flake's checks
+      checks.${system} = nixpkgs.lib.recursiveUpdate 
+        (backend.checks.${system} or { }) 
+        {
+          # You can also add additional checks specific to the root flake here
+        };
     };
 }
 ```
 
-And configuration:
+And now we can configure the service in `configuration.nix`:
 
 ```nix
-# configuration.nix
-{ config, lib, pkgs, backend, nixpkgs, ... }: {
-
+#configuration.nix
+# 🆕👇          👇
+{ modulesPath, backend, ... }: {
   imports = [
-    "${nixpkgs}/nixos/modules/virtualisation/amazon-image.nix"
+    (modulesPath + "/profiles/qemu-guest.nix")
+    ./disk-config.nix
+    # 🆕👇
     backend.nixosModules.x86_64-linux.default
   ];
 
+  # ...
   networking.firewall = {
     enable = true;
     allowedTCPPorts = [ 80 443 ];
@@ -366,17 +372,18 @@ And configuration:
     };
   };
 
-
   security.acme = {
     acceptTerms = true;
     certs = {
-      "blog.flakm.com".email = "maciej.jan.flak@gmail.com";
+      "blog.flakm.com".email = "me@flakm.com";
     };
   };
+  # ...
 }
 ```
 
-It's also a rather uncomplicated set of settings copied mainly from [NixOs wiki entry for nginx](https://nixos.wiki/wiki/Nginx).
+
+Nginx and acme are inspired by [NixOs wiki entry for nginx wiki](https://nixos.wiki/wiki/Nginx).
 It uses Acme bot to set up TLS certificate for our backend. 
 Finally, it enables and configures our service called `backend`
 
@@ -384,9 +391,6 @@ And here is the part that seemed absolutely magic to me.
 If we want to deploy our flake to the machine we'll have to just run the:
 
 ```bash
-# just tells the nix to use my GPG agent
-# you won't need it if you are using plain ssh keys in ~/.ssh/ directory
-export NIX_SSHOPTS="-o IdentityAgent=$SSH_AUTH_SOCK"
 nixos-rebuild --flake .#blog \
   --target-host root@blog.flakm.com  \
   switch
@@ -401,6 +405,11 @@ copying path '/nix/store/yilxvsbxh1nybiy7j4zfw6dlvzw9rn2h-unit-backend.service' 
 copying path '/nix/store/k7sgdp698500a53lbb3mi7hx67kf19xr-system-units' to 'ssh://root@blog.flakm.com'...
 copying path '/nix/store/jkxgii5n3bakf6jxycadb1g3sr9m6gmi-etc' to 'ssh://root@blog.flakm.com'...
 copying path '/nix/store/3lmdyrsja06r2ps5s601vhxcgwqijy5c-nixos-system-unnamed-23.05.20230406.0e19daa' to 'ssh://root@blog.flakm.com'...
+updating GRUB 2 menu...
+activating the configuration...
+setting up /etc...
+reloading user units for root...
+setting up tmpfiles
 ```
 
 Can it be working already? Let's check in the browser, it can not be that simple!
@@ -408,35 +417,36 @@ Can it be working already? Let's check in the browser, it can not be that simple
 {{< figure src="/images/page_working.png" class="img-sm">}}
 
 ```bash
-❯ curl https://flakm.com  -I
+❯ curl https://flakm.com -i
 HTTP/2 200
-date: Fri, 21 Apr 2023 21:02:44 GMT
+date: Mon, 04 Dec 2023 19:54:14 GMT
 content-type: text/html; charset=utf-8
 cache-control: max-age=14400
 cf-cache-status: HIT
-age: 613
-last-modified: Fri, 21 Apr 2023 20:52:31 GMT
+age: 7193
+last-modified: Mon, 04 Dec 2023 17:54:21 GMT
 accept-ranges: bytes
-report-to: {"endpoints":[{"url":"https:\/\/a.nel.cloudflare.com\/report\/v3?s=hpJTiB0O1JL00CWG%2BSwpHShG8wab8ixvGh8O3z7laYm3AuiYzjg0QGU7HvSmjkOapijegDA0NLckTY%2FDi%2Bsqf1i9JadG5JcNn8BsYNgoOjL%2Be7Z4r1GNEbhgfQw%3D"}],"group":"cf-nel","max_age":604800}
+report-to: {"endpoints":[{"url":"https:\/\/a.nel.cloudflare.com\/report\/v3?s=M9yYuM%2FA6C92dT0rl78GlMF85txhiMo%2BCwzP4GRulgBtaVbjqUSJcHXvhmGXGg9jNaTx4dKApH%2F5iWzxUvRvkJXucXx7xNxbjSRZ9lLCW094fai4sYYrJFOxomg%3D"}],"group":"cf-nel","max_age":604800}
 nel: {"success_fraction":0,"report_to":"cf-nel","max_age":604800}
 server: cloudflare
-cf-ray: 7bb891d51978bfc3-WAW
-alt-svc: h3=":443"; ma=86400, h3-29=":443"; ma=86400
+cf-ray: 8306999ff99cbf65-WAW
+alt-svc: h3=":443"; ma=86400
+
+<h1>Hello, World!</h1>%
 ```
 
 It is working, and caching works! 
-Also, notice that at no point did I mention installing some binary on your system. It's been all taken care of by direnv configuration.
+Also, notice that at no point did I mention installing any binary on your system (like `tofu` or `docker`). It's been all taken care of by direnv configuration and nix's magic.
 
 ### Summary
 
 So to sum up. Until now we managed to:
 
-1. Build a flake that wraps a hello world rust server but also has a full suite of tests
+1. Build a flake that wraps a hello world rust server with series of checks
 2. Expose backend flake as a NixOs module with 2 flags that runs binary using systemd service
-3. Write terraform module that provisions our machines, DNS records and configures Cloudflare to cache the content
+3. Write opentofu module that provisions our machines, DNS records and configures Cloudflare to cache the content
 4. Provision resources
 5. Write flake that takes backend as an input and configures nginx with ACME bot for valid TLS configuration
 6. Deploy that flake to production using a single command that could be easily performed on CI
 
 Not too bad for such a simple setup, right?
-

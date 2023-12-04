@@ -36,27 +36,6 @@
         "type": "github"
       }
     },
-    "fenix": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ],
-        "rust-analyzer-src": []
-      },
-      "locked": {
-        "lastModified": 1701671019,
-        "narHash": "sha256-ctG01Syj/7TrfV4arc3qyN4a3mAvgXbivYrdXKqdL8U=",
-        "owner": "nix-community",
-        "repo": "fenix",
-        "rev": "5e6667eda7fb055c0a8388172372fb89e5b33e05",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-community",
-        "repo": "fenix",
-        "type": "github"
-      }
-    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -95,7 +74,6 @@
       "inputs": {
         "advisory-db": "advisory-db",
         "crane": "crane",
-        "fenix": "fenix",
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs"
       }

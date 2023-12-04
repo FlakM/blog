@@ -1,11 +1,11 @@
 ---
-title: "blazing fast module 🚀"
-date: 2023-04-06t20:58:49+02:00
-draft: true
+title: "Blazing fast module 🚀"
+date: 2023-12-04T12:00:00+02:00
+draft: false
 
-series: ["Perfect small deployment"]
+series: ["Perfect simple deployment"]
 
-summary: '
+Summary: '
 Exposing our blazing fast hello world
 '
 ---

@@ -1,10 +1,12 @@
 ---
 title: "Going for a first ride with NixOs 🚴"
-date: 2023-04-06T17:13:18+02:00
-draft: true
+date: 2023-12-01T12:00:00+02:00
+draft: false
+
+authors: ["Maciej Flak"]
 
 
-series: ["Perfect small deployment"]
+series: ["Perfect simple deployment"]
 
 toc: true
 
