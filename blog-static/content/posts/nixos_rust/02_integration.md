@@ -3,7 +3,7 @@ title: "blazing fast module 🚀"
 date: 2023-04-06t20:58:49+02:00
 draft: true
 
-series: ["perfect simple deployment"]
+series: ["Perfect small deployment"]
 
 summary: '
 Exposing our blazing fast hello world

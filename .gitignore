@@ -35,3 +35,5 @@ id_rsa.pem
 # example: *tfplan*
 
 .setup.sh
+
+backend_old/

@@ -1,10 +1,7 @@
 {
-  # Define inputs for the flake
   inputs = {
-    # Specify the Nixpkgs repository to use
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
-    # Include the disko project and set it to follow the nixpkgs input
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";

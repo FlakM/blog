@@ -38,7 +38,6 @@ Prerequisites for provisioning the instance are:
 
 ### Environment setup
 
-
 I'm using a [yubikey smart card with gpg agent for ssh authentication](https://github.com/drduh/YubiKey-Guide#configure-smartcard) and my public key is located in `~/.ssh/id_rsa_yubikey.pub`.
 
 I like this setup, the key never touched the disk on my computer. But there is no problem if you don't have one you might just use plain ssh keys.
@@ -53,7 +52,91 @@ export TF_VAR_ZONE_ID="" # Cloud flare zone id
 
 ## 🚢 to ☁️ 
 
-### Provisioning
+### Host declarative configuration
+
+The NixOs configuration was inspired by nixos-anywhere [examples](https://github.com/numtide/nixos-anywhere-examples).
+Entry point to configuration is located in `flake.nix`
+
+```nix
+# flake.nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs = { nixpkgs, disko, ... }:
+    let
+      # The system we are building for. It will not work on other systems.
+      # One might use flake-utils to make it work on other systems.
+      system = "x86_64-linux";
+      
+      # Import the Nix packages from nixpkgs
+      pkgs = import nixpkgs { inherit system; };
+    in
+    {
+      # Define a formatter package for the system to enable `nix fmt`
+      formatter.${system} = pkgs.nixpkgs-fmt;
+
+      # NixOS configuration for the 'blog' system
+      nixosConfigurations.blog = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [
+          disko.nixosModules.disko  # Include disko module
+          ./configuration.nix       # Include custom configuration
+        ];
+      };
+
+      # Development shell environment
+      # It will include the packages specified in the buildInputs attribute
+      # once the shell is entered using `nix develop` or direnv integration.
+      devShell.${system} = pkgs.mkShell {
+        buildInputs = with pkgs; [
+          opentofu  # provisioning tool for the OpenTofu project
+          ponysay   # just for fun run `ponysay hello`
+        ];
+      };
+    };
+}
+```
+
+My root flake imports host's configuration located in `configuration.nix`
+
+```nix
+# configuration.nix
+{ modulesPath, ... }: {
+  imports = [
+    # Adds availableKernelModules, kernelModules for instances running under QEMU (Ie Hetzner Cloud)
+    (modulesPath + "/profiles/qemu-guest.nix")
+    # Contains the configuration for the disk layout
+    ./disk-config.nix
+  ];
+
+  # Use the GRUB 2 boot loader.
+  boot.loader.grub = {
+    # no need to set devices, disko will add all devices that have a EF02 partition to the list already
+    # devices = [ ];
+    efiSupport = true;
+    efiInstallAsRemovable = true;
+  };
+
+  # Enable ssh access to the root user
+  services.openssh.enable = true;
+  users.users.root.openssh.authorizedKeys.keys = [
+    "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDh6bzSNqVZ1Ba0Uyp/EqThvDdbaAjsJ4GvYN40f/p9Wl4LcW/MQP8EYLvBTqTluAwRXqFa6fVpa0Y9Hq4kyNG62HiMoQRjujt6d3b+GU/pq7NN8+Oed9rCF6TxhtLdcvJWHTbcq9qIGs2s3eYDlMy+9koTEJ7Jnux0eGxObUaGteQUS1cOZ5k9PQg+WX5ncWa3QvqJNxx446+OzVoHgzZytvXeJMg91gKN9wAhKgfibJ4SpQYDHYcTrOILm7DLVghrcU2aFqLKVTrHSWSugfLkqeorRadHckRDr2VUzm5eXjcs4ESjrG6viKMKmlF1wxHoBrtfKzJ1nR8TGWWeH9NwXJtQ+qRzAhnQaHZyCZ6q4HvPlxxXOmgE+JuU6BCt6YPXAmNEMdMhkqYis4xSzxwWHvko79NnKY72pOIS2GgS6Xon0OxLOJ0mb66yhhZB4hUBb02CpvCMlKSLtvnS+2IcSGeSQBnwBw/wgp1uhr9ieUO/wY5K78w2kYFhR6Iet55gutbikSqDgxzTmuX3Mkjq0L/MVUIRAdmOysrR2Lxlk692IrNYTtUflQLsSfzrp6VQIKPxjfrdFhHIfbPoUdfMf+H06tfwkGONgcej56/fDjFbaHouZ357wcuwDsuMGNRCdyW7QyBXF/Wi28nPq/KSeOdCy+q9KDuOYsX9n/5Rsw== cardno:000614320136"
+  ];
+
+  system.stateVersion = "23.11";
+}
+```
+
+The contents of `disk-config.nix` are copied straight out the example mentioned before.
+
+### Provisioning infrastructure
 
 Here is the complete terraform deployment definition:
 
@@ -171,6 +254,8 @@ If you have [direnv integration](https://nixos.wiki/wiki/Flakes#Direnv_integrati
 direnv allow
 ```
 
+
+
 And your shell will magically receive all the required binaries. To deploy the code run:
 
 
@@ -197,10 +282,11 @@ ssh root@blog.flakm.com
 At this point I've managed to create following resources:
 
 1. Hetzner instance with public IP with ssh that gives root access
-2. NixOs installed on the machine
-3. DNS A record that points to our instance
-4. Proxied page in cloudflare
-5. Way to deploy changes using nix
+2. DNS A record that points to our instance
+3. Proxied page in cloudflare
+4. Declarativelyt partitioned disks on Hetzner instance
+4. NixOs installed
+5. Way to deploy changes using nix using ssh
 
 We are ready to use nix!
 
@@ -208,9 +294,9 @@ We are ready to use nix!
 
 ## NixOs deployment
 
-Ok, so now we want to take our NixOs module and install it on our fresh machine! We need to create a new flake inside `blog_deployment` repository.
+So now we want to add our rust backend to the host.
 
-This is very straight forward. We just need to add new input for now pointing to specific commit and define NixOs configuration called `blog`.
+We need to add new input for now pointing to specific commit and define NixOs configuration called `blog`.
 It inherits `system` so in our case - value `"x86_64-linux"`, passes `specialArgs` and finally import a module from file config.nix  which contains our system configuration.
 
 
