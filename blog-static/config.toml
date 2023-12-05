@@ -6,20 +6,18 @@ copyright = "Copyright © 2023, Maciej Flak; all rights reserved."
 
 title = "FlakM blog"
 theme = "hugo-coder"
-googleAnalytics = "G-3TLSQC3STQ"
 
 paginate = 20
 enableEmoji = true
 
 
 [markup.highlight]
-style = "github-dark"
+style = "rrt"
 
 [taxonomies]
   category = "categories"
   series = "series"
   tag = "tags"
-  author = "authors"
 
 # Menu links
 [[menu.main]]
@@ -38,8 +36,8 @@ style = "github-dark"
 
 [params]
   author = "Maciek Flak"
-  info = "Minimalist, Husband, Dad, Rust coder, Linux & FOSS enthusiast"
-  description = "Simple coder blog"
+  info = "Just a minimalist coder"
+  description = "simple coder blog"
   keywords = "blog,developer,personal"
   avatarurl = "images/avatar.jpg"
 
@@ -61,7 +59,7 @@ style = "github-dark"
     name = "Github"
     icon = "fa fa-github"
     weight = 1
-    url = "https://github.com/johndoe/"
+    url = "https://github.com/flakm/"
 
 [[params.social]]
     name = "Mastodon"

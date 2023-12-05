@@ -3,7 +3,7 @@ title: "Screaming at the clouds ☁️"
 date: 2023-12-04T15:00:00+02:00
 draft: false
 
-series: ["Perfect simple deployment"]
+series: ["Simple personal blog"]
 
 Summary: '
 How to provision VM with valid DNS record and cloudflare caching.
