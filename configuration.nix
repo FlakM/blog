@@ -1,10 +1,11 @@
-{ modulesPath, backend, static, ... }: {
+{ system, modulesPath, backend, static, ... }: {
   imports = [
     # Adds availableKernelModules, kernelModules for instances running under QEMU (Ie Hetzner Cloud)
     (modulesPath + "/profiles/qemu-guest.nix")
     # Contains the configuration for the disk layout
     ./disk-config.nix
     backend.nixosModules.x86_64-linux.default
+    static.nixosModules.x86_64-linux.default
   ];
 
   # Use the GRUB 2 boot loader.
@@ -32,20 +33,16 @@
       domain = "blog.flakm.com";
     };
 
+    static-website = {
+      enable = true;
+      domain = "blog.flakm.com";
+    };
+
     nginx = {
       enable = true;
       virtualHosts."blog.flakm.com" = {
         forceSSL = true;
         enableACME = true;
-
-        # Configure root location for serving static content
-        locations."/" = {
-          root = "${static.outputs.packages.x86_64-linux.default}";  # Assuming 'static' points to the directory containing the static content
-          tryFiles = "$uri $uri/ =404";
-          extraConfig = ''
-          add_header Cache-Control "public, max-age=31536000, immutable";
-          '';
-        };
       };
     };
   };

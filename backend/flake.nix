@@ -73,7 +73,10 @@
               };
 
               services.nginx.virtualHosts.${cfg.domain} = {
-                locations."/api" = { proxyPass = "http://127.0.0.1:3000"; };
+                locations."/api" = { 
+                  proxyPass = "http://127.0.0.1:3000"; 
+                  priority = 10; # smaller number means higher priority
+                };
               };
             };
           };

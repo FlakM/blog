@@ -1,9 +1,10 @@
-{ system
-, pkgs
+{ pkgs
 , makeTest
-, self
+, backend
+, static
 }:
 let
+  test_port = 80;
   sharedModule = {
     # Since it's common for CI not to have $DISPLAY available, we have to explicitly tell the tests "please don't expect any screen available"
     virtualisation.graphics = false;
@@ -15,17 +16,29 @@ makeTest
 
   nodes = {
     server = {
+      imports = [
+        sharedModule
+        backend.nixosModules.x86_64-linux.default
+        static.nixosModules.x86_64-linux.default     
+      ];
       networking.firewall = {
         enable = true;
         allowedTCPPorts = [ 80 443 ];
       };
 
-      imports = [ sharedModule self.nixosModules.${system}.default ];
-      services.backend = {
-        enable = true;
-        domain = "server";
+      services = {
+        backend = {
+          enable = true;
+          domain = "blog.flakm.com";
+        };
+
+        static-website = {
+          enable = true;
+          domain = "blog.flakm.com";
+        };
+        nginx.enable = true;
       };
-      services.nginx.enable = true;
+
     };
     client = {
       imports = [ sharedModule ];
@@ -40,7 +53,7 @@ makeTest
     import sys
     from termcolor import cprint
 
-    server.wait_for_open_port(80)
+    server.wait_for_open_port(${toString test_port})
     server.wait_for_open_port(3000)
 
     expected = "<h1>Hello, World!</h1>"

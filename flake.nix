@@ -8,12 +8,12 @@
     };
     # Add the backend flake as an input
     backend = {
-      url = "path:./backend"; # Points to the flake in the backend directory
+      url = "./backend"; # Points to the flake in the backend directory
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     static = {
-      url = "path:./blog-static";
+      url = "./blog-static";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -27,10 +27,19 @@
 
       # Import the Nix packages from nixpkgs
       pkgs = import nixpkgs { inherit system; };
+
+      # Integration that are run using kvm virtual machines
+      integration = import ./integration.nix {
+        makeTest = import (nixpkgs + "/nixos/tests/make-test-python.nix");
+        inherit pkgs;
+        inherit backend;
+        inherit static;
+      };
     in
     {
       # Define a formatter package for the system to enable `nix fmt`
       formatter.${system} = pkgs.nixpkgs-fmt;
+      
 
       # NixOS configuration for the 'blog' system
       nixosConfigurations.blog = nixpkgs.lib.nixosSystem {
@@ -43,10 +52,10 @@
       };
 
       # Merge the checks from the backend flake into the root flake's checks
-      checks.${system} = nixpkgs.lib.recursiveUpdate 
-        (backend.checks.${system} or { }) 
+      checks.${system} = nixpkgs.lib.recursiveUpdate
+        (backend.checks.${system} or { })
         {
-          # You can also add additional checks specific to the root flake here
+          itg = integration;
         };
 
       # Development shell environment

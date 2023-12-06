@@ -1,0 +1,90 @@
+
+# 2023-12-06 11:35:03.398115
++start_all
+
+# 2023-12-06 11:35:07.707697
++start_all()
+
+# 2023-12-06 11:35:30.354058
++server
+
+# 2023-12-06 11:35:35.695159
++ls
+
+# 2023-12-06 11:35:42.908387
++exec
+
+# 2023-12-06 11:35:50.408713
++exec("ls")
+
+# 2023-12-06 11:36:30.131641
++server.succeed("ls")
+
+# 2023-12-06 11:36:54.454301
++print(server.succeed("ls"))
+
+# 2023-12-06 11:37:23.021705
++print(server.succeed("ls systemd-private-a65d52c07a4d4fe7be080727d558f9cf-nginx.service-yts1hG"))
+
+# 2023-12-06 11:37:32.324880
++print(server.succeed("ls systemd-private-a65d52c07a4d4fe7be080727d558f9cf-nginx.service-yts1hG/tmp"))
+
+# 2023-12-06 11:37:56.146374
++print(server.succeed("journalctl nginx.service"))
+
+# 2023-12-06 11:38:47.944238
++print(server.succeed("journalctl -u nginx.service"))
+
+# 2023-12-06 11:38:59.509120
++print(server.succeed("cat /nix/store/pqp430rdnn0j6fpx56whiaka5lwvvx9b-nginx.conf"))
+
+# 2023-12-06 11:48:01.046571
++exit
+
+# 2023-12-06 12:02:15.762265
++start_all
+
+# 2023-12-06 12:02:18.741870
++start_all()
+
+# 2023-12-06 12:02:34.173292
++print(server.succeed("journalctl -u nginx.service"))
+
+# 2023-12-06 12:02:55.004932
++print(server.succeed("cat /nix/store/pqp430rdnn0j6fpx56whiaka5lwvvx9b-nginx.conf"))
+
+# 2023-12-06 21:04:23.934516
++start_all()
+
+# 2023-12-06 21:04:58.704568
++print(server.succeed("cat /nix/store/l2p91sd1j7nh7dsk95gzclxgza0aygn1-nginx.conf"))
+
+# 2023-12-06 21:06:03.392764
++start_all
+
+# 2023-12-06 21:06:05.987897
++start_all()
+
+# 2023-12-06 21:06:38.521311
++print(server.succeed("cat /nix/store/vjsamgdvd2lkdvfrj0qx1s37kmiziw96-nginx.conf"))
+
+# 2023-12-06 21:07:44.120107
++server.succeed
+
+# 2023-12-06 21:08:05.743045
++server.succeed("curl server/api")
+
+# 2023-12-06 21:08:20.325430
++exit
+
+# 2023-12-06 21:26:34.302865
++start_all
+
+# 2023-12-06 21:26:36.838863
++start_all()
+
+# 2023-12-06 21:26:54.316311
++server.shell_interact
+
+# 2023-12-06 21:26:57.396337
++server.shell_interact()

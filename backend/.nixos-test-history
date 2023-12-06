@@ -1,0 +1,12 @@
+
+# 2023-12-06 21:45:13.716355
++start_all()
+
+# 2023-12-06 21:45:45.687702
++client.succeed("curl http://server/api")
+
+# 2023-12-06 21:45:55.719902
++client.succeed("curl -v http://server/api")
+
+# 2023-12-06 21:46:01.337998
++client.succeed("curl -vv http://server/api")
