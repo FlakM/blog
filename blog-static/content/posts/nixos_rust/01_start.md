@@ -1,6 +1,6 @@
 ---
-title: "A first ride with NixOs 🚴"
-date: 2023-12-01T12:00:00+02:00
+title: "Measure twice cut once with NixOs"
+date: 2023-11-10T12:00:00+02:00
 draft: false
 
 authors: ["Maciej Flak"]
@@ -10,13 +10,13 @@ series: ["Simple personal blog"]
 toc: true
 
 Summary: '
-About picking the right size of solutions for the problem.
+In this post, I share my approach to developing a personal blog, focusing on using NixOS for its simplicity and efficiency. I discuss the rationale behind selecting non-mainstream tech tools and outline my key objectives for a low-maintenance, open-source, and flexible blogging platform.
 '
 ---
 
 ## Learning to ride a bicycle
 
-Over a year ago I bought a bike for my dougther. Well actually, I've bought two different-sized bikes because sizing is hard and one of them was pink...
+A year ago I've purchased two bikes for my dougther, navigating the tricky waters of sizing and pinkness.
 
 It soon has become clear that the first was waay too big for her, and the second was just right.
 
@@ -26,75 +26,64 @@ It soon has become clear that the first was waay too big for her, and the second
 {{< toc >}}
 
 
-### The modern tech bike shop
+### Navigating technology, size does matter
 
-Similarly, if you try to solve a technical problem with a solution that is too big for you - it will hurt.
+Consider the challenge of tackling a tech problem with a solution that's too 'big'. It quickly becomes unwieldy and awkward.
 
-Sadly the incentives of the industry are not aligned to help us pick just **the right solution™**.
+The industry often doesn't align its incentives with helping us choose **the right solution™**.
+Products, typically address broad issues, appealing to a wide audience but introducing unnecessary complexity.
 
-The proposed products tend to solve a more generic problem. They serve a wider group of recipients, but also smack you in a face with a lot of accidental complexity.
+We call the problems that we create and can solve **accidental complexity**.
+In contrast, **essential complexity** is inherent to the problem itself.
+It cannot be removed - it just is. [^1]
 
-**Accidental complexity** relates to problems that we created and that can be fixed or avoided.
-The other part is **essential complexity** which relates the problem itself. It cannot be removed - it just is. [^1]
+In 2023, terms like: cloud, docker, kubernetes and serverless are ubiquitous in the dev/ops world, each offering different set of strengths:
 
-If we start to research the topic of deploying networked systems in 2023 we most definitely will find the following terms: cloud, docker, kubernetes, serverless.
-
-While those are all fine ideas and each solves a very particular problem.
-
-*The cloud* is amazing at covering very bursty loads, it doesn't scale economically for very steady loads (no matter what providers say).
+- *The cloud* excels in handling bursty loads, it doesn't scale economically for very steady loads.
 Just take a look at [reference architecture](https://docs.aws.amazon.com/whitepapers/latest/best-practices-wordpress/reference-architecture.html) for a WordPress deployment, it's not a simple strategy.
 And I'm for one sure that after implementing it will never leave AWS.
 
-*Docker* seems like an extremely important step in the right direction, it's a developer-focused tool that abstracts over a deployment runtime.
-But at the same time, it gives a false sense of security and invites a lot of nasty paper cuts.
+- *Docker* is an amazing developer-focused tool that abstracts over a deployment runtime.
+However, it can also give a false sense of security and lead to unexpected issues.
 
-According to internet *kubernetes* won the war for the standard orchestration solution and probably rightfully so.
+- According to internet *kubernetes* won the war for the standard orchestration solution and probably rightfully so.
 But the basic - happy path experience differs greatly from when you have to understand the inner parts of the system. 
-Especially when debugging in anger.
 Many good things can be said about it, but it ain't simple.
 If you don't believe me go ahead and read a recent [changelog for version 1.27](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.27.md#changes-by-kind-1) and amazing postmortem for failed version migration at [reddit](https://www.reddit.com/r/kubernetes/comments/11xxsz1/long_detailed_post_mortem_on_a_reddit_failed_k8s/).
 
-*Serverless* promises to be extremely scalable and easy to architect your services.
-But it abstracts over stateless applications. To get the benefits one has to use the accompanying storage solutions.
+- *Serverless* promises to be extremely scalable and easy to architect your services.
+To get the full benefits with storage one has to use the accompanying data solutions (hosted services etc).
 Needless to say, it tends to introduce heavy vendor lock-in.
 
+None of these solutions may be ideal for small-scale deployments, as they tend to introduce more accidental complexity than they resolve.
 
-At the same time, according to stack overflow's survey, most of us are not working for the biggest organizations. [^2]
-
-> Almost **50% percent of developers work for companies with less than 100 employees (not only tech)**.
-
-Our companies almost certainly don't have even a small fraction of big tech budgets to burn.
-Particularly now, when the economy is going to yaml.
-
-
-### My incentives
+### My host, my rules
 
 Since I'm currently working on building my personal blog to become a part of a fediverse I thought I'll write the road trip down.
 
-I would like to propose a crazy idea - *not using containerization and orchestrators*. 
-Instead do it the good, old-school way - but with the help of new([?](https://en.wikipedia.org/wiki/NixOS#History)) tools.
-Here are my main objectives for the whole system:
+Here is my crazy plan - skip containerization and orchestrators. 
+Instead, I'll lean on the tried-and-true methods, spiced up with modern([?](https://en.wikipedia.org/wiki/NixOS#History)) tools like NixOS.
+My goals for the project:
 
-1. **Low maintenance** and **low cost** - I'm a single person working on it without any revenue in sight.
-2. **Open-source** solutions preferred where possible - others might find it more useful.
-3. **Do once - do right** - I'm spending my time in the evenings. This is a precious commodity.
-4. **Self-documenting** - there is a high chance that I'll have to rediscover some parts many months/years later.
-5. **No vendor/technology lock-in** - I'd hate to be forced to work on something just because some company decides to change the pricing model.
+1. **Low maintenance & cost** - it's just me here.
+2. **Open-source** - it's just better.
+3. **Efficiency** - I'm spending my time in the evenings. I aim to do things just once.
+4. **Self-documenting** - I might need to rediscover certain parts after a while, so making them self-explanatory is crucial.
+5. **No vendor/technology lock-in** - I want to avoid being boxed in by any vendor or technology, especially if they change their terms or pricing.
 
-### How to avoid getting bitten
+### The Why behind the NixOs
 
-I've been daily driving NixOs on my desktop for over a year now. It has been a fun ride and I feel like it's getting more and more attention everywhere.
+I've been using NixOS on my desktop daily for over a year, and it's been quite the experience. It seems to be gaining traction everywhere.
 
-Here is my idea about what NixOs (the declarative operating system), nix (the packaging system) bring to the table:
+So, what do NixOs (the declarative operating system), nix (the packaging system) offer? Here's my take:
 
-1. **Aggregation of system components** - much like k8s with multiple helm charts but in declarative way. The state is held in your repository (kind of like argocd).
+1. **Aggregation of system components** - like k8s with multiple helm charts but in declarative way. The state is held in your repository (kind of like argocd).
 2. **Meta build tool** - just like docker, nix is technology agnostic it doesn't care if it's rust, go, or java. 
 3. **Self-documentation** - since there is only one entry point to your system it is by default documented. You won't forget about this little docker container that you have run on the machine or this tiny tiny package on the OS.
 4. **Debuggability and testability** - NixOs configuration can be easily deployed onto a VM or tested using an automated testing framework
 5. [Reproducible builds](https://reproducible-builds.org/) - if you have the same source (most of the time) you will obtain bit for bit same result no matter when you run it. You can even read more about building 15yo software [here](https://blinry.org/nix-time-travel/). While in theory possible using [docker](https://fosdem.org/2023/schedule/event/container_reproducible_dockerfile/attachments/slides/5574/export/events/attachments/container_reproducible_dockerfile/slides/5574/FOSDEM2023_Bit_for_bit_reproducible_builds_with_Dockerfile.pdf) it's definietely not a practice.
 6. **No need to keep the binary data around** - this is due reproducibility of builds. The artifacts storing story turned out to be a big [docker kerfuffle](https://www.theregister.com/2023/03/17/docker_free_teams_plan/) recently.
-7. **Good practices encouraged**. It doesn't leave what I like to call a shell mess. Strange one-off bash scripts casting dark spells.
-   You can almost by accident create an amazing developer experience using direnv and devShells.
+7. **Good practices encouraged**. It doesn't leave a shell mess. Strange one-off bash scripts casting dark spells.
 
 
 The system I'd like to build up - my blog as of writing those words is a statically generated hugo site that is hosted using github pages.
@@ -102,10 +91,10 @@ There are many things wrong with it, but I like it (apart from writing regularly
 
 My side quest is to use as few dockers and yaml lines as possible. *Because it's all fucking terrible and it should burn!*
 
-I'll provision the environment using Hetzner and Cloudflare since I believe that it will enable most people to do the same if they wish.
-Over the course of the series, it should become clear that there is no problem with moving to different provider or to self hosted box.
+I'll be setting up the environment with Hetzner and Cloudflare, making it easy for others to replicate if they wish.
+Throughout this series, you'll see how simple it is to switch providers or even move to a self-hosted setup.
 
-Let's dive in!
+Let's get started!
 
 ## Starting a new project
 
@@ -163,7 +152,7 @@ async fn handler() -> Html<&'static str> {
 
 We can already run a working application by running `nix run`:
 
-```bash
+```shell
 ❯ git commit -m "chore: initial server"
 # let's run the code
 ❯ nix run                                                                                                                      │
@@ -175,7 +164,7 @@ listening on 127.0.0.1:3000
 
 Actually, if we investigate right now our flake:
 
-```
+```shell
 ❯ nix flake show
 
 warning: Git tree '/home/flakm/programming/flakm/blog' is dirty
@@ -254,8 +243,7 @@ result/bin/quick-start: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV),
 ```
 
 In the [next post](../02_integration) I will cover exposing this code as a NixOs module that wraps our binary with the systemd service.
-I'll also showcase a very powerful feature of NixOs - integration tests using VMs using Quemu as the backend! 
-
+Plus, I'm excited to highlight a powerful feature of NixOS: integration tests using VMs, with QEMU as the backend!"
 
 If you want to see more of similar write-ups you might follow me on mastodon [@flakm](https://hachyderm.io/@flakm).
 
