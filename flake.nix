@@ -62,6 +62,8 @@
       # It will include the packages specified in the buildInputs attribute
       # once the shell is entered using `nix develop` or direnv integration.
       devShell.${system} = pkgs.mkShell {
+        DATABASE_URL = "sqlite://db.sqlite";
+
         buildInputs = with pkgs; [
           opentofu # provisioning tool for the OpenTofu project
           ponysay # just for fun run `ponysay hello`

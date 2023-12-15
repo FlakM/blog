@@ -51,6 +51,15 @@ resource "cloudflare_record" "blog_nginx" {
   proxied = false  # Direct DNS, no Cloudflare proxy
 }
 
+
+resource "cloudflare_record" "fedi_nginx" {
+  zone_id = var.ZONE_ID
+  name    = "fedi.flakm.com"
+  value   = hcloud_server.blog.ipv4_address
+  type    = "A"
+  proxied = false  # Direct DNS, no Cloudflare proxy
+}
+
 # Cloudflare DNS CNAME record for the blog behind Cloudflare proxy
 resource "cloudflare_record" "blog" {
   zone_id = var.ZONE_ID

@@ -30,7 +30,7 @@
   services = {
     backend = {
       enable = true;
-      domain = "blog.flakm.com";
+      domain = "fedi.flakm.com";
     };
 
     static-website = {
@@ -44,6 +44,10 @@
         forceSSL = true;
         enableACME = true;
       };
+      virtualHosts."fedi.flakm.com" = {
+        forceSSL = true;
+        enableACME = true;
+      };
     };
   };
 
@@ -51,6 +55,7 @@
     acceptTerms = true;
     certs = {
       "blog.flakm.com".email = "me@flakm.com";
+      "fedi.flakm.com".email = "me@flakm.com";
     };
   };
 

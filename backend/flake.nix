@@ -27,6 +27,8 @@
         # Common arguments can be set here to avoid repeating them later
         commonArgs = {
           inherit src;
+          buildInputs = [ pkgs.openssl ];
+          nativeBuildInputs = [ pkgs.pkg-config ];
         };
 
         # Build *just* the cargo dependencies, so we can reuse
@@ -70,11 +72,17 @@
                   RuntimeDirectory = "backend";
                   PermissionsStartOnly = true;
                 };
+                environment = {
+                  "RUST_LOG" = "INFO";
+                };
               };
 
               services.nginx.virtualHosts.${cfg.domain} = {
-                locations."/api" = { 
+                locations."/" = { 
                   proxyPass = "http://127.0.0.1:3000"; 
+                  extraConfig = "
+                    proxy_set_header Host $host;
+                  ";
                   priority = 10; # smaller number means higher priority
                 };
               };
@@ -118,6 +126,11 @@
         # This will enable running `nix run` to start the server
         packages = {
           default = server;
+        };
+
+        devShell = with pkgs; mkShell {
+          DATABASE_URL = "sqlite://db.sqlite";
+
         };
       });
 

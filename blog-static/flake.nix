@@ -48,7 +48,7 @@
                     root = "${website}";
                     tryFiles = "$uri $uri/ =404";
                     extraConfig = ''
-                      add_header Cache-Control "public, max-age=31536000, immutable";
+                      add_header Cache-Control "public, max-age=3600";
                     '';
                     priority = 100; # set a high priority to make it the last location
               };
