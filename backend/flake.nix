@@ -21,8 +21,17 @@
           inherit system;
         };
 
+        inherit (pkgs) lib;
+
         craneLib = crane.lib.${system};
-        src = craneLib.cleanCargoSource (craneLib.path ./.);
+
+        sqlFilter = path: _type: null != builtins.match ".*sql$" path;
+        sqlOrCargo = path: type: (sqlFilter path type) || (craneLib.filterCargoSources path type);
+
+        src = lib.cleanSourceWith {
+          src = craneLib.path ./.; # The original, unfiltered source
+          filter = sqlOrCargo;
+        };
 
         # Common arguments can be set here to avoid repeating them later
         commonArgs = {
@@ -40,6 +49,15 @@
         server = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
           doCheck = false;
+          nativeBuildInputs = (commonArgs.nativeBuildInputs or [ ]) ++ [
+            pkgs.sqlx-cli
+          ];
+
+          preBuild = ''
+            export DATABASE_URL=sqlite:./db.sqlite3
+            sqlx database create
+            sqlx migrate run
+          '';
         });
 
       in
@@ -68,18 +86,26 @@
                 serviceConfig = {
                   Restart = "on-failure";
                   ExecStart = "${server}/bin/quick-start";
-                  DynamicUser = "yes";
-                  RuntimeDirectory = "backend";
-                  PermissionsStartOnly = true;
+                  DynamicUser = true;
+                  TemporaryFileSystem = "/:ro";
+                  BindPaths = "/var/lib/backend";
+                  StateDirectory = "backend";
+                  WorkingDirectory = "/var/lib/backend";
+                  ProtectSystem = "strict";
+                  ProtectHome = true;
+                  PrivateTmp = true;
+                  NoNewPrivileges = true;
+
                 };
                 environment = {
-                  "RUST_LOG" = "INFO";
+                  "RUST_LOG" = "DEBUG";
+                  "DATABASE_PATH" = "/var/lib/backend/db.sqlite3";
                 };
               };
 
               services.nginx.virtualHosts.${cfg.domain} = {
-                locations."/" = { 
-                  proxyPass = "http://127.0.0.1:3000"; 
+                locations."/" = {
+                  proxyPass = "http://127.0.0.1:3000";
                   extraConfig = "
                     proxy_set_header Host $host;
                   ";
@@ -129,7 +155,6 @@
         };
 
         devShell = with pkgs; mkShell {
-          DATABASE_URL = "sqlite://db.sqlite";
 
         };
       });

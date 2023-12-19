@@ -1,7 +1,8 @@
 use crate::{
     activities::{accept::Accept, create_post::CreatePost, follow::Follow},
+    database::Database,
     error::Error,
-    utils::generate_object_id, database::Database,
+    utils::generate_object_id,
 };
 
 use activitypub_federation::{
@@ -75,10 +76,24 @@ pub struct DbUser {
     // exists only for local users
     pub private_key: Option<String>,
     last_refreshed_at: DateTime<Utc>,
-    pub followers: Vec<Url>,
     pub local: bool,
     pub icon: Option<Icon>,
     pub summary: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Follower {
+    pub follower_url: Url,
+}
+
+impl TryFrom<String> for Follower {
+    type Error = Error;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Ok(Follower {
+            follower_url: Url::parse(&value)?,
+        })
+    }
 }
 
 #[derive(sqlx::FromRow, Debug)]
@@ -117,7 +132,6 @@ impl DbUser {
             public_key: keypair.public_key,
             private_key: Some(keypair.private_key),
             last_refreshed_at: Utc::now(),
-            followers: vec![],
             local: true,
             icon: Some(Icon {
                 kind: ImageType::Image,
@@ -128,21 +142,19 @@ impl DbUser {
         })
     }
 
-    pub fn followers(&self) -> &Vec<Url> {
-        &self.followers
-    }
-
     pub fn followers_url(&self) -> Result<Url, Error> {
         Ok(Url::parse(&format!("{}/followers", self.ap_id.inner()))?)
     }
 
     pub async fn post(&self, post: DbPost, data: &Data<Database>) -> Result<(), Error> {
         let id = generate_object_id(data.domain())?;
+        let local_user = data.local_user().await?;
         let create = CreatePost::new(post.into_json(data).await?, id.clone());
         let mut inboxes = vec![];
-        for f in self.followers.clone() {
-            tracing::info!("Sending post to {}", f);
-            let user: DbUser = ObjectId::from(f).dereference(data).await?;
+
+        for f in data.get_followers(&local_user).await? {
+            tracing::info!("Sending post to {:?}", f);
+            let user: DbUser = ObjectId::from(f.follower_url).dereference(data).await?;
             inboxes.push(user.shared_inbox_or_inbox());
         }
         self.send(create, inboxes, data).await?;
@@ -195,7 +207,7 @@ impl Object for DbUser {
         object_id: Url,
         data: &Data<Self::DataType>,
     ) -> Result<Option<Self>, Self::Error> {
-        data.find_by_object_id(object_id.as_str()).await.map(|u| Some(u))
+        data.find_by_object_id(object_id.as_str()).await.map(Some)
     }
 
     async fn into_json(self, _data: &Data<Self::DataType>) -> Result<Self::Kind, Self::Error> {
@@ -230,7 +242,6 @@ impl Object for DbUser {
             public_key: json.public_key.public_key_pem,
             private_key: None,
             last_refreshed_at: Utc::now(),
-            followers: vec![],
             local: false,
             icon: None,
             summary: None,

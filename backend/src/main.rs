@@ -1,24 +1,30 @@
+use crate::http::http_get_user_followers;
 use crate::{
     database::Database,
     http::{http_get_user, http_post_to_followers, http_post_user_inbox, webfinger},
-    objects::{
-        person::{DbUser, SqliteUser},
-        post::DbPost,
-    },
+    objects::{person::DbUser, post::DbPost},
     utils::generate_object_id,
 };
+use ::http::HeaderMap;
 use activitypub_federation::config::{FederationConfig, FederationMiddleware};
+use axum::response::Response;
 use axum::{
+    http::Request,
     routing::{get, post},
     Router,
 };
+use bytes::Bytes;
 use error::Error;
-use sqlx::sqlite::SqlitePoolOptions;
-use std::{
-    net::ToSocketAddrs,
-    sync::{Arc, Mutex},
-};
+use sqlx::sqlite::SqliteConnectOptions;
+use sqlx::SqlitePool;
+use std::net::ToSocketAddrs;
+use tower_http::classify::ServerErrorsFailureClass;
 use tracing::log::info;
+
+use axum::extract::MatchedPath;
+use std::time::Duration;
+use tower_http::trace::TraceLayer;
+use tracing::{info_span, Span};
 
 mod activities;
 mod database;
@@ -29,16 +35,20 @@ mod objects;
 mod utils;
 
 const DOMAIN: &str = "fedi.flakm.com";
-const LOCAL_USER_NAME: &str = "blog_test";
+const LOCAL_USER_NAME: &str = "blog_test2";
 const BIND_ADDRESS: &str = "127.0.0.1:3000";
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     env_logger::builder().format_timestamp(None).init();
 
-    let database_url =
-        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:./db.sqlite".into());
-    let pool = SqlitePoolOptions::new().connect(&database_url).await?;
+    let database_path = std::env::var("DATABASE_PATH").unwrap_or_else(|_| "./db.sqlite".into());
+
+    let options = SqliteConnectOptions::new()
+        .filename(database_path)
+        .create_if_missing(true);
+
+    let pool = SqlitePool::connect_with(options).await?;
 
     // Run migrations in ./migrations
     sqlx::migrate!().run(&pool).await?;
@@ -46,29 +56,20 @@ async fn main() -> Result<(), Error> {
 
     info!("Setup local user and database");
 
-    let database = Database {
-        pool: pool.clone(),
-    };
+    let database = Database { pool };
 
-    let local_user = database.read_user(LOCAL_USER_NAME).await?;
-
-
-    let local_user = match local_user {
-        Some(local_user) => local_user, // user already exists
+    // local user might not be initialized yet
+    let _local_user = match database.read_user(LOCAL_USER_NAME).await? {
+        Some(local_user) => {
+            info!("Local user already exists");
+            local_user // user already exists
+        }
         None => {
             let local_user = DbUser::new(DOMAIN, LOCAL_USER_NAME)?;
-
-            // serialize to string and print to stdout
-            let local_user_json = serde_json::to_string(&local_user)?;
-            println!("{}", local_user_json);
-
             database.save_user(&local_user).await?;
+            info!("Created local user");
             local_user
         }
-    };
-
-    let database = Database {
-        pool
     };
 
     info!("Setup configuration");
@@ -83,8 +84,36 @@ async fn main() -> Result<(), Error> {
     let app = Router::new()
         .route("/:user", get(http_get_user))
         .route("/:user/inbox", post(http_post_user_inbox))
+        .route("/:user/followers", get(http_get_user_followers))
         .route("/.well-known/webfinger", get(webfinger))
         .route("/followers", post(http_post_to_followers))
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(|request: &Request<_>| {
+                    // Log the matched route's path (with placeholders not filled in).
+                    // Use request.uri() or OriginalUri if you want the real path.
+                    let matched_path = request
+                        .extensions()
+                        .get::<MatchedPath>()
+                        .map(MatchedPath::as_str);
+
+                    info_span!(
+                        "http_request",
+                        method = ?request.method(),
+                        matched_path,
+                        some_other_field = tracing::field::Empty,
+                    )
+                })
+                .on_request(|_request: &Request<_>, _span: &Span| {
+                    // You can use `_span.record("some_other_field", value)` in one of these
+                    // closures to attach a value to the initially empty field in the info_span
+                    // created above.
+                })
+                .on_response(|_response: &Response, _latency: Duration, _span: &Span| {
+                    // ...
+                    tracing::info!("response");
+                }),
+        )
         .layer(FederationMiddleware::new(config));
 
     let addr = BIND_ADDRESS

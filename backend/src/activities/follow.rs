@@ -1,14 +1,10 @@
 use crate::{
-    activities::accept::Accept, database::Database, generate_object_id,
-    objects::person::DbUser,
-};
-use activitypub_federation::{
-    config::Data,
-    fetch::object_id::ObjectId,
-    kinds::activity::FollowType,
-    traits::ActivityHandler,
+    activities::accept::Accept, database::Database, generate_object_id, objects::person::DbUser,
 };
 use activitypub_federation::traits::Actor;
+use activitypub_federation::{
+    config::Data, fetch::object_id::ObjectId, kinds::activity::FollowType, traits::ActivityHandler,
+};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -53,16 +49,15 @@ impl ActivityHandler for Follow {
     // Ignore clippy false positive: https://github.com/rust-lang/rust-clippy/issues/6446
     #[allow(clippy::await_holding_lock)]
     async fn receive(self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
+        tracing::info!("Received follow from {}", self.actor.inner());
+
+        let local_user = data.local_user().await?;
+        let follower = self.actor.dereference(data).await?;
+
         // add to followers
-        let local_user = {
-            let local_user = data.local_user().await?;
-            // TODO save that to database
-            local_user.followers.push(self.actor.inner().clone());
-            local_user.clone()
-        };
+        data.save_follower(&local_user, &follower).await?;
 
         // send back an accept
-        let follower = self.actor.dereference(data).await?;
         let id = generate_object_id(data.domain())?;
         let accept = Accept::new(local_user.ap_id.clone(), self, id.clone());
         tracing::info!("Sending accept to {}", follower.ap_id);

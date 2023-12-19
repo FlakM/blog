@@ -54,8 +54,7 @@ impl CreatePost {
         let create_with_context = WithContext::new_default(create);
         let local_user = data.local_user().await?;
         let sends =
-            SendActivityTask::prepare(&create_with_context, &local_user, vec![inbox], data)
-                .await?;
+            SendActivityTask::prepare(&create_with_context, &local_user, vec![inbox], data).await?;
         for send in sends {
             send.sign_and_send(data).await?;
         }

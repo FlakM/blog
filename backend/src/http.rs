@@ -68,7 +68,7 @@ pub async fn webfinger(
 ) -> Result<Json<Webfinger>, Error> {
     let name = extract_webfinger_name(&query.resource, &data)?;
     let db_user = data
-        .read_user(&name)
+        .read_user(name)
         .await?
         .ok_or(Error(anyhow::anyhow!("Resource not found")))?;
     Ok(Json(build_webfinger_response(
@@ -90,4 +90,17 @@ pub async fn http_post_to_followers(data: Data<Database>) -> Result<impl IntoRes
     local_user.post(post, &data).await?;
 
     Ok(StatusCode::OK)
+}
+
+#[debug_handler]
+pub async fn http_get_user_followers(
+    Path(name): Path<String>,
+    data: Data<Database>,
+) -> Result<impl IntoResponse, Error> {
+    let user = data
+        .read_user(&name)
+        .await?
+        .ok_or(Error(anyhow::anyhow!("User not found")))?;
+    let followers = data.get_followers(&user).await?;
+    Ok(Json(followers))
 }

@@ -3,12 +3,8 @@ name = "quick-start"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[features]
-default = ["axum"]
-axum = ["dep:axum", "dep:tower", "dep:hyper", "dep:http-body-util"]
-
 [dependencies]
+
 chrono = { version = "0.4.31", features = ["clock", "serde"], default-features = false }
 serde = { version = "1.0.193", features = ["derive"] }
 async-trait = "0.1.74"
@@ -42,21 +38,15 @@ regex = { version = "1.10.2", default-features = false, features = ["std", "unic
 futures = "0.3.29"
 moka = { version = "0.12.1", features = ["future"] }
 
-# Axum
-axum = { version = "0.6.20", features = [
-  "json",
-  "headers",
-  "http1",
-  "query",
-], default-features = true, optional = true }
-tower = { version = "0.4.13", optional = true }
-hyper = { version = "0.14", optional = true }
-http-body-util = {version = "0.1.0", optional = true }
+axum = { version = "0.6", features = ["json","headers","query","tracing"]}
+tower = "0.4.13"
+hyper =  "0.14"
+http-body-util = "0.1.0"
 
 anyhow = "1.0.75"
 rand = "0.8.5"
 env_logger = "0.10.1"
-tower-http = { version = "0.5.0", features = ["map-request-body", "util"] }
+tower-http = { version = "0.4.0", features = ["map-request-body", "util", "trace"] }
 axum-macros = "0.3.8"
 activitypub_federation = "0.5.0-beta.5"
 tokio = { version = "1.35.0", features = ["full"] }
@@ -65,8 +55,4 @@ tokio = { version = "1.35.0", features = ["full"] }
 
 sqlx = { version = "0.7", features = [ "runtime-tokio", "migrate", "sqlite", "chrono" , "json"] }
 
-
-[profile.dev]
-strip = "symbols"
-debug = 0
 
