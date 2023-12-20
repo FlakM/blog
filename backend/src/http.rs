@@ -38,7 +38,7 @@ pub async fn http_get_user(
 ) -> Result<FederationJson<WithContext<Person>>, Error> {
     let db_user = data.read_user(&name).await?;
     let json_user = db_user
-        .ok_or(Error(anyhow::anyhow!("User not found")))?
+        .ok_or(Error(anyhow::anyhow!("User not found http_get_user")))?
         .into_json(&data)
         .await?;
     Ok(FederationJson(WithContext::new_default(json_user)))

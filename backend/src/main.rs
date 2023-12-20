@@ -5,7 +5,6 @@ use crate::{
     objects::{person::DbUser, post::DbPost},
     utils::generate_object_id,
 };
-use ::http::HeaderMap;
 use activitypub_federation::config::{FederationConfig, FederationMiddleware};
 use axum::response::Response;
 use axum::{
@@ -13,18 +12,18 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use bytes::Bytes;
 use error::Error;
 use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::SqlitePool;
 use std::net::ToSocketAddrs;
-use tower_http::classify::ServerErrorsFailureClass;
 use tracing::log::info;
 
 use axum::extract::MatchedPath;
 use std::time::Duration;
 use tower_http::trace::TraceLayer;
-use tracing::{info_span, Span};
+use tracing::{field, info_span, Span};
+
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod activities;
 mod database;
@@ -40,7 +39,16 @@ const BIND_ADDRESS: &str = "127.0.0.1:3000";
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    env_logger::builder().format_timestamp(None).init();
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                // axum logs rejections from built-in extractors with the `axum::rejection`
+                // target, at `TRACE` level. `axum::rejection=trace` enables showing those events
+                "backend=debug,tower_http=debug,axum::rejection=trace".into()
+            }),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
 
     let database_path = std::env::var("DATABASE_PATH").unwrap_or_else(|_| "./db.sqlite".into());
 
@@ -100,8 +108,10 @@ async fn main() -> Result<(), Error> {
                     info_span!(
                         "http_request",
                         method = ?request.method(),
+                        path = ?request.uri().path(),
                         matched_path,
-                        some_other_field = tracing::field::Empty,
+                        latency = tracing::field::Empty,
+                        status_code = tracing::field::Empty,
                     )
                 })
                 .on_request(|_request: &Request<_>, _span: &Span| {
@@ -109,8 +119,9 @@ async fn main() -> Result<(), Error> {
                     // closures to attach a value to the initially empty field in the info_span
                     // created above.
                 })
-                .on_response(|_response: &Response, _latency: Duration, _span: &Span| {
-                    // ...
+                .on_response(|response: &Response, latency: Duration, span: &Span| {
+                    span.record("latency", field::debug(&latency));
+                    span.record("status_code", response.status().as_u16());
                     tracing::info!("response");
                 }),
         )

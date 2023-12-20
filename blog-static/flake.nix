@@ -22,7 +22,8 @@
           submodules = [ theme ];
         };
 
-      in {
+      in
+      {
 
         # This is a NixOS module that can be imported into a NixOS
         # configuration to enable the static-website service
@@ -44,17 +45,17 @@
 
             config = mkIf cfg.enable {
               services.nginx.virtualHosts.${cfg.domain} = {
-                locations."/" = { 
-                    root = "${website}";
-                    tryFiles = "$uri $uri/ =404";
-                    extraConfig = ''
-                      add_header Cache-Control "public, max-age=3600";
-                    '';
-                    priority = 100; # set a high priority to make it the last location
+                locations."/" = {
+                  root = "${website}";
+                  tryFiles = "$uri $uri/ =404";
+                  extraConfig = ''
+                    add_header Cache-Control "public, max-age=3600";
+                  '';
+                  priority = 100; # set a high priority to make it the last location
+                };
               };
             };
           };
-        };
 
         packages.default = website;
 

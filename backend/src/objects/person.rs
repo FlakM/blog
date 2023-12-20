@@ -1,5 +1,5 @@
 use crate::{
-    activities::{accept::Accept, create_post::CreatePost, follow::Follow},
+    activities::{accept::Accept, create_post::CreatePost, follow::Follow, undo_follow::Unfollow},
     database::Database,
     error::Error,
     utils::generate_object_id,
@@ -118,6 +118,7 @@ pub enum PersonAcceptedActivities {
     CreateNote(CreatePost),
     Follow(Follow),
     Accept(Accept),
+    UndoFollow(Unfollow),
 }
 
 impl DbUser {
@@ -207,7 +208,7 @@ impl Object for DbUser {
         object_id: Url,
         data: &Data<Self::DataType>,
     ) -> Result<Option<Self>, Self::Error> {
-        data.find_by_object_id(object_id.as_str()).await.map(Some)
+        data.find_by_object_id(object_id.as_str()).await
     }
 
     async fn into_json(self, _data: &Data<Self::DataType>) -> Result<Self::Kind, Self::Error> {

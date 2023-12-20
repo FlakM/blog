@@ -19,7 +19,7 @@ makeTest
       imports = [
         sharedModule
         backend.nixosModules.x86_64-linux.default
-        static.nixosModules.x86_64-linux.default     
+        static.nixosModules.x86_64-linux.default
       ];
       networking.firewall = {
         enable = true;

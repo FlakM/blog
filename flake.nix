@@ -39,7 +39,7 @@
     {
       # Define a formatter package for the system to enable `nix fmt`
       formatter.${system} = pkgs.nixpkgs-fmt;
-      
+
 
       # NixOS configuration for the 'blog' system
       nixosConfigurations.blog = nixpkgs.lib.nixosSystem {
@@ -62,12 +62,14 @@
       # It will include the packages specified in the buildInputs attribute
       # once the shell is entered using `nix develop` or direnv integration.
       devShell.${system} = pkgs.mkShell {
-        DATABASE_URL = "sqlite://db.sqlite";
+        DATABASE_PATH = "./db.sqlite";
+        DATABASE_URL = "sqlite://./db.sqlite";
 
         buildInputs = with pkgs; [
           opentofu # provisioning tool for the OpenTofu project
           ponysay # just for fun run `ponysay hello`
           hugo
+          sqlx-cli
 
         ];
       };

@@ -85,7 +85,7 @@
                 wantedBy = [ "multi-user.target" ];
                 serviceConfig = {
                   Restart = "on-failure";
-                  ExecStart = "${server}/bin/quick-start";
+                  ExecStart = "${server}/bin/backend";
                   DynamicUser = true;
                   TemporaryFileSystem = "/:ro";
                   BindPaths = "/var/lib/backend";
@@ -154,9 +154,7 @@
           default = server;
         };
 
-        devShell = with pkgs; mkShell {
-
-        };
+        devShell = with pkgs; mkShell { };
       });
 
 }
