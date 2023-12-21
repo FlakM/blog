@@ -69,3 +69,11 @@ style = "rrt"
     rel = "me noopener"
 
 
+
+[outputFormats.BlogListJSON]
+mediaType = "application/json"
+baseName = "bloglist"
+isPlainText = true
+
+[outputs]
+home = ["HTML", "RSS", "BlogListJSON"]

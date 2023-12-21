@@ -1,0 +1,24 @@
+{{- $.Scratch.Add "index" slice -}}
+{{- range .Site.RegularPages -}}
+    {{- if eq .Section "posts" }}
+        {{- $.Scratch.Add "index" (dict 
+            "title" .Title 
+            "description" .Description 
+            "url" .Permalink 
+            "date" .Date 
+            "lastmod" .Lastmod 
+            "publishDate" .PublishDate 
+            "expiryDate" .ExpiryDate 
+            "author" .Params.author 
+            "tags" .Params.tags 
+            "categories" .Params.categories 
+            "images" .Params.images 
+            "featuredImage" .Params.featured_image 
+            "summary" .Summary 
+            "wordCount" .WordCount 
+            "readingTime" .ReadingTime 
+            "custom" .Params.custom
+        ) -}}
+    {{- end -}}
+{{- end -}}
+{{- $.Scratch.Get "index" | jsonify -}}

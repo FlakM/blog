@@ -1,6 +1,6 @@
 use crate::{
     activities::{accept::Accept, create_post::CreatePost, follow::Follow, undo_follow::Unfollow},
-    database::Database,
+    database::Repository,
     error::Error,
     utils::generate_object_id,
 };
@@ -147,17 +147,18 @@ impl DbUser {
         Ok(Url::parse(&format!("{}/followers", self.ap_id.inner()))?)
     }
 
-    pub async fn post(&self, post: DbPost, data: &Data<Database>) -> Result<(), Error> {
+    pub async fn post(&self, post: DbPost, data: &Data<Repository>) -> Result<(), Error> {
         let id = generate_object_id(data.domain())?;
-        let local_user = data.local_user().await?;
         let create = CreatePost::new(post.into_json(data).await?, id.clone());
         let mut inboxes = vec![];
 
-        for f in data.get_followers(&local_user).await? {
-            tracing::info!("Sending post to {:?}", f);
+        for f in data.user_followers(self).await? {
             let user: DbUser = ObjectId::from(f.follower_url).dereference(data).await?;
-            inboxes.push(user.shared_inbox_or_inbox());
+            let mailbox = user.shared_inbox_or_inbox();
+            inboxes.push(mailbox);
         }
+
+        tracing::info!("Sending post to {:?}", inboxes);
         self.send(create, inboxes, data).await?;
         Ok(())
     }
@@ -166,7 +167,7 @@ impl DbUser {
         &self,
         activity: Activity,
         recipients: Vec<Url>,
-        data: &Data<Database>,
+        data: &Data<Repository>,
     ) -> Result<(), Error>
     where
         Activity: ActivityHandler + Serialize + Debug + Send + Sync,
@@ -196,7 +197,7 @@ pub struct Person {
 
 #[async_trait::async_trait]
 impl Object for DbUser {
-    type DataType = Database;
+    type DataType = Repository;
     type Kind = Person;
     type Error = Error;
 
@@ -208,7 +209,7 @@ impl Object for DbUser {
         object_id: Url,
         data: &Data<Self::DataType>,
     ) -> Result<Option<Self>, Self::Error> {
-        data.find_by_object_id(object_id.as_str()).await
+        data.user_by_object_id(object_id.as_str()).await
     }
 
     async fn into_json(self, _data: &Data<Self::DataType>) -> Result<Self::Kind, Self::Error> {

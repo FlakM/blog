@@ -1,5 +1,5 @@
 use crate::{
-    database::Database,
+    database::Repository,
     error::Error,
     objects::{person::DbUser, post::Note},
     utils::generate_object_id,
@@ -42,7 +42,7 @@ impl CreatePost {
 }
 
 impl CreatePost {
-    pub async fn send(note: Note, inbox: Url, data: &Data<Database>) -> Result<(), Error> {
+    pub async fn send(note: Note, inbox: Url, data: &Data<Repository>) -> Result<(), Error> {
         info!("Sending reply to {}", &note.attributed_to);
         let create = CreatePost {
             actor: note.attributed_to.clone(),
@@ -52,7 +52,8 @@ impl CreatePost {
             id: generate_object_id(data.domain())?,
         };
         let create_with_context = WithContext::new_default(create);
-        let local_user = data.local_user().await?;
+        let local_user = data.blog_user().await?;
+        println!(">>>> inbox: {:?}", inbox);
         let sends =
             SendActivityTask::prepare(&create_with_context, &local_user, vec![inbox], data).await?;
         for send in sends {
@@ -64,7 +65,7 @@ impl CreatePost {
 
 #[async_trait::async_trait]
 impl ActivityHandler for CreatePost {
-    type DataType = Database;
+    type DataType = Repository;
     type Error = crate::error::Error;
 
     fn id(&self) -> &Url {

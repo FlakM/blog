@@ -70,7 +70,6 @@
           ponysay # just for fun run `ponysay hello`
           hugo
           sqlx-cli
-
         ];
       };
     };

@@ -1,5 +1,5 @@
 use crate::{
-    activities::create_post::CreatePost, database::Database, error::Error, generate_object_id,
+    activities::create_post::CreatePost, database::Repository, error::Error, generate_object_id,
     objects::person::DbUser,
 };
 use activitypub_federation::{
@@ -45,7 +45,7 @@ pub struct Mention {
 
 #[async_trait::async_trait]
 impl Object for DbPost {
-    type DataType = Database;
+    type DataType = Repository;
     type Kind = Note;
     type Error = Error;
 
@@ -98,7 +98,7 @@ impl Object for DbPost {
         let note = Note {
             kind: Default::default(),
             id: generate_object_id(data.domain())?.into(),
-            attributed_to: data.local_user().await?.ap_id,
+            attributed_to: data.blog_user().await?.ap_id,
             to: vec![public()],
             content: format!("Hello {}", creator.name),
             in_reply_to: Some(json.id.clone()),

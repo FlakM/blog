@@ -1,4 +1,4 @@
-use crate::{activities::follow::Follow, database::Database, objects::person::DbUser};
+use crate::{activities::follow::Follow, database::Repository, objects::person::DbUser};
 use activitypub_federation::{
     config::Data, fetch::object_id::ObjectId, kinds::activity::AcceptType, traits::ActivityHandler,
 };
@@ -28,7 +28,7 @@ impl Accept {
 
 #[async_trait::async_trait]
 impl ActivityHandler for Accept {
-    type DataType = Database;
+    type DataType = Repository;
     type Error = crate::error::Error;
 
     fn id(&self) -> &Url {

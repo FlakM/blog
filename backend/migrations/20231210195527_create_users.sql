@@ -6,4 +6,3 @@ CREATE TABLE users (
 );
 
 
-

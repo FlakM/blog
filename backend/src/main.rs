@@ -1,6 +1,7 @@
+use crate::database::Repository;
 use crate::http::http_get_user_followers;
 use crate::{
-    database::Database,
+    database::SqlDatabase,
     http::{http_get_user, http_post_to_followers, http_post_user_inbox, webfinger},
     objects::{person::DbUser, post::DbPost},
     utils::generate_object_id,
@@ -16,6 +17,7 @@ use error::Error;
 use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::SqlitePool;
 use std::net::ToSocketAddrs;
+use std::sync::Arc;
 use tracing::log::info;
 
 use axum::extract::MatchedPath;
@@ -64,10 +66,10 @@ async fn main() -> Result<(), Error> {
 
     info!("Setup local user and database");
 
-    let database = Database { pool };
+    let database = Arc::new(SqlDatabase { pool }) as Repository;
 
     // local user might not be initialized yet
-    let _local_user = match database.read_user(LOCAL_USER_NAME).await? {
+    let _local_user = match database.user_by_name(LOCAL_USER_NAME).await? {
         Some(local_user) => {
             info!("Local user already exists");
             local_user // user already exists

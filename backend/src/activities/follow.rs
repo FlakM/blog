@@ -1,5 +1,5 @@
 use crate::{
-    activities::accept::Accept, database::Database, generate_object_id, objects::person::DbUser,
+    activities::accept::Accept, database::Repository, generate_object_id, objects::person::DbUser,
 };
 use activitypub_federation::traits::Actor;
 use activitypub_federation::{
@@ -31,7 +31,7 @@ impl Follow {
 
 #[async_trait::async_trait]
 impl ActivityHandler for Follow {
-    type DataType = Database;
+    type DataType = Repository;
     type Error = crate::error::Error;
 
     fn id(&self) -> &Url {
@@ -49,11 +49,11 @@ impl ActivityHandler for Follow {
     async fn receive(self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
         tracing::info!("Received follow from {}", self.actor.inner());
 
-        let local_user = data.local_user().await?;
+        let local_user = data.blog_user().await?;
         let follower = self.actor.dereference(data).await?;
 
         // add to followers
-        data.save_follower(&local_user, &follower).await?;
+        data.add_user_follower(&local_user, &follower).await?;
 
         // send back an accept
         let id = generate_object_id(data.domain())?;
