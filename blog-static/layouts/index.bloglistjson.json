@@ -1,23 +1,19 @@
 {{- $.Scratch.Add "index" slice -}}
+{{- $targetDate := "2023-11-01T00:13:20+01:00" | time -}} {{- /* Convert string to time */ -}}
 {{- range .Site.RegularPages -}}
-    {{- if eq .Section "posts" }}
+    {{- if and (eq .Section "posts") (gt .Date $targetDate) }} {{- /* Check if the post is in 'posts' section and its date is greater than the target date */ -}}
+        {{- $slug := .File.TranslationBaseName -}} {{- /* Default slug */ -}}
+        {{- with .Params.slug }} {{- /* Check if slug is set in front matter */ -}}
+            {{- $slug = . -}} {{- /* Override slug if set in front matter */ -}}
+        {{- end -}}
         {{- $.Scratch.Add "index" (dict 
             "title" .Title 
             "description" .Description 
-            "url" .Permalink 
             "date" .Date 
-            "lastmod" .Lastmod 
-            "publishDate" .PublishDate 
-            "expiryDate" .ExpiryDate 
-            "author" .Params.author 
-            "tags" .Params.tags 
-            "categories" .Params.categories 
-            "images" .Params.images 
             "featuredImage" .Params.featured_image 
-            "summary" .Summary 
-            "wordCount" .WordCount 
-            "readingTime" .ReadingTime 
-            "custom" .Params.custom
+            "tags" .Params.tags 
+            "url" .Permalink 
+            "slug" $slug
         ) -}}
     {{- end -}}
 {{- end -}}

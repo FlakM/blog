@@ -1,14 +1,14 @@
----
-title: "Blazing fast module 🚀"
-date: 2023-12-04T12:00:00+02:00
-draft: false
++++
+title =  "Blazing fast module 🚀"
+date = 2023-12-04T12:00:00+02:00
+draft = false
 
-series: ["Simple personal blog"]
+series = ["Simple personal blog"]
 
-Summary: '
-Exposing our blazing fast hello world
-'
----
+description = """
+Exposing blazing fast hello world using NixOs module.
+"""
++++
 
 ## Let's expose the flake!
 

@@ -78,6 +78,12 @@
                 example = default;
                 description = "The domain name";
               };
+
+              posts_path = mkOption {
+                type = types.path;
+                default = "./posts.json";
+                description = "The path to the posts json file";
+              };
             };
 
             config = mkIf cfg.enable {
@@ -85,7 +91,7 @@
                 wantedBy = [ "multi-user.target" ];
                 serviceConfig = {
                   Restart = "on-failure";
-                  ExecStart = "${server}/bin/backend";
+                  ExecStart = "${server}/bin/backend ${config.services.backend.posts_path}";
                   DynamicUser = true;
                   TemporaryFileSystem = "/:ro";
                   BindPaths = "/var/lib/backend";
@@ -98,7 +104,7 @@
 
                 };
                 environment = {
-                  "RUST_LOG" = "DEBUG";
+                  "RUST_LOG" = "INFO";
                   "DATABASE_PATH" = "/var/lib/backend/db.sqlite3";
                 };
               };

@@ -2,7 +2,6 @@
 draft = true
 date = 2023-12-20T08:37:45+01:00
 title = "Securing the blog host"
-description = "A blog entry about hardening my nixos host"
 slug = ""
 authors = []
 tags = []
@@ -10,6 +9,11 @@ categories = []
 externalLink = ""
 
 series = ["Simple personal blog"]
+
+description="""
+Adding a tailscale goodness and systemd properties
+"""
+
 +++
 
 

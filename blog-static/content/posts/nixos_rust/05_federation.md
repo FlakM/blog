@@ -2,7 +2,6 @@
 draft = true
 date = 2023-12-20T14:16:11+01:00
 title = "Making the blog federated"
-description = ""
 slug = ""
 authors = []
 tags = []
@@ -10,7 +9,9 @@ categories = []
 externalLink = ""
 
 series = ["Simple personal blog"]
-custom = "what"
+description = """
+Live blog federation using ActivityPub.
+"""
 +++
 
 ## Live federation

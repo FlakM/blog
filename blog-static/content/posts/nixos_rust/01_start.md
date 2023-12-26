@@ -1,18 +1,18 @@
----
-title: "Measure twice cut once with NixOs"
-date: 2023-11-10T12:00:00+02:00
-draft: false
++++ 
+title = "Measure twice cut once with NixOs"
+date = 2023-11-10T12:00:00+02:00
+draft = false
+series = ["Simple personal blog"]
+toc = true
 
-authors: ["Maciej Flak"]
-series: ["Simple personal blog"]
+description = """
+Intro into series about setting up a personal blog, focusing on using NixOS for its simplicity and efficiency. 
 
+I discuss the rationale behind selecting non-mainstream tech tools and outline my key objectives for a low-maintenance, open-source, and flexible blogging platform.
+"""
 
-toc: true
-
-Summary: '
-In this post, I share my approach to developing a personal blog, focusing on using NixOS for its simplicity and efficiency. I discuss the rationale behind selecting non-mainstream tech tools and outline my key objectives for a low-maintenance, open-source, and flexible blogging platform.
-'
----
+tags = []
++++ 
 
 ## Learning to ride a bicycle
 

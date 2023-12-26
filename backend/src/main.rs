@@ -1,3 +1,4 @@
+use crate::blog_posts::BlogPost;
 use crate::database::Repository;
 use crate::http::http_get_user_followers;
 use crate::{
@@ -18,16 +19,16 @@ use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::SqlitePool;
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
-use tracing::log::info;
 
 use axum::extract::MatchedPath;
 use std::time::Duration;
 use tower_http::trace::TraceLayer;
-use tracing::{field, info_span, Span};
+use tracing::{field, info, info_span, Span};
 
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod activities;
+mod blog_posts;
 mod database;
 mod error;
 #[allow(clippy::diverging_sub_expression, clippy::items_after_statements)]
@@ -62,14 +63,23 @@ async fn main() -> Result<(), Error> {
 
     // Run migrations in ./migrations
     sqlx::migrate!().run(&pool).await?;
-    tracing::info!("Migrations run");
+    info!("Migrations run");
+
+    let posts_path = std::env::args().nth(1).expect("No posts file given");
+    let blog_repo = blog_posts::BlogRepository { db: pool.clone() };
+    let blog_posts = BlogPost::load_new_posts(posts_path).expect("Failed to load blog posts");
+
+    for blog_post in blog_posts {
+        info!("Processing: {}", blog_post.slug);
+        blog_repo.new_blog_entry(&blog_post).await?;
+    }
 
     info!("Setup local user and database");
 
     let database = Arc::new(SqlDatabase { pool }) as Repository;
 
     // local user might not be initialized yet
-    let _local_user = match database.user_by_name(LOCAL_USER_NAME).await? {
+    let local_user = match database.user_by_name(LOCAL_USER_NAME).await? {
         Some(local_user) => {
             info!("Local user already exists");
             local_user // user already exists
@@ -88,6 +98,22 @@ async fn main() -> Result<(), Error> {
         .app_data(database)
         .build()
         .await?;
+
+    let data = config.to_request_data();
+    let mut to_be_published = vec![];
+    for post in blog_repo.get_unpublished_blog_posts().await? {
+        let post = post.to_post(&local_user, data.domain())?;
+        to_be_published.push(post.clone());
+    }
+
+    tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_secs(5)).await;
+        tracing::info!("Publishing posts");
+        for post in to_be_published {
+            tracing::info!("Publishing post: {}", post.ap_id);
+            local_user.post(post, &data).await.unwrap();
+        }
+    });
 
     info!("Listen with HTTP server on {BIND_ADDRESS}");
     let config = config.clone();
@@ -124,7 +150,7 @@ async fn main() -> Result<(), Error> {
                 .on_response(|response: &Response, latency: Duration, span: &Span| {
                     span.record("latency", field::debug(&latency));
                     span.record("status_code", response.status().as_u16());
-                    tracing::info!("response");
+                    info!("response");
                 }),
         )
         .layer(FederationMiddleware::new(config));

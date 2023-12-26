@@ -42,6 +42,7 @@
     backend = {
       enable = true;
       domain = "fedi.flakm.com";
+      posts_path = "${static.packages.x86_64-linux.default}/bloglist.json";
     };
 
     static-website = {
