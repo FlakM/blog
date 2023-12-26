@@ -48,6 +48,7 @@
         modules = [
           disko.nixosModules.disko # Include disko module
           ./configuration.nix # Include custom configuration
+          ./plausible.nix
         ];
       };
 

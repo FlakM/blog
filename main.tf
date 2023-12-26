@@ -105,6 +105,14 @@ resource "cloudflare_record" "blog_nginx" {
   proxied = false  # Direct DNS, no Cloudflare proxy
 }
 
+# Cloudflare DNS A record configuration for the plausible analytics
+resource "cloudflare_record" "plausible_nginx" {
+  zone_id = var.ZONE_ID
+  name    = "plausible.flakm.com"
+  value   = hcloud_server.blog.ipv4_address
+  type    = "A"
+  proxied = false  # Direct DNS, no Cloudflare proxy
+}
 
 resource "cloudflare_record" "fedi_nginx" {
   zone_id = var.ZONE_ID
