@@ -20,7 +20,7 @@ use sqlx::{sqlite::SqliteRow, FromRow, Row};
 use std::fmt::Debug;
 use url::Url;
 
-use super::post::DbPost;
+use super::post::FediPost;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ImageType {
@@ -147,9 +147,9 @@ impl DbUser {
         Ok(Url::parse(&format!("{}/followers", self.ap_id.inner()))?)
     }
 
-    pub async fn post(&self, post: DbPost, data: &Data<Repository>) -> Result<(), Error> {
+    pub async fn post(&self, post: &FediPost, data: &Data<Repository>) -> Result<(), Error> {
         let id = generate_object_id(data.domain())?;
-        let create = CreatePost::new(post.into_json(data).await?, id.clone());
+        let create = CreatePost::new(post.clone().into_json(data).await?, id.clone());
         let mut inboxes = vec![];
 
         for f in data.user_followers(self).await? {
@@ -158,7 +158,14 @@ impl DbUser {
             inboxes.push(mailbox);
         }
 
-        tracing::info!("Sending post to {:?}", inboxes);
+        tracing::info!(
+            "Sending post to inboxes [{}]",
+            inboxes
+                .iter()
+                .map(|i| i.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
         self.send(create, inboxes, data).await?;
         Ok(())
     }

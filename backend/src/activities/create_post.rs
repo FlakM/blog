@@ -3,7 +3,7 @@ use crate::{
     error::Error,
     objects::{person::DbUser, post::Note},
     utils::generate_object_id,
-    DbPost,
+    FediPost,
 };
 use activitypub_federation::{
     activity_sending::SendActivityTask,
@@ -53,7 +53,6 @@ impl CreatePost {
         };
         let create_with_context = WithContext::new_default(create);
         let local_user = data.blog_user().await?;
-        println!(">>>> inbox: {:?}", inbox);
         let sends =
             SendActivityTask::prepare(&create_with_context, &local_user, vec![inbox], data).await?;
         for send in sends {
@@ -77,12 +76,11 @@ impl ActivityHandler for CreatePost {
     }
 
     async fn verify(&self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
-        DbPost::verify(&self.object, &self.id, data).await?;
+        FediPost::verify(&self.object, &self.id, data).await?;
         Ok(())
     }
 
-    async fn receive(self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
-        DbPost::from_json(self.object, data).await?;
+    async fn receive(self, _data: &Data<Self::DataType>) -> Result<(), Self::Error> {
         Ok(())
     }
 }

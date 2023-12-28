@@ -1,10 +1,10 @@
-use crate::blog_posts::BlogPost;
 use crate::database::Repository;
 use crate::http::http_get_user_followers;
+use crate::hugo_posts::HugoBlogPost;
 use crate::{
     database::SqlDatabase,
-    http::{http_get_user, http_post_to_followers, http_post_user_inbox, webfinger},
-    objects::{person::DbUser, post::DbPost},
+    http::{http_get_user, http_post_user_inbox, webfinger},
+    objects::{person::DbUser, post::FediPost},
     utils::generate_object_id,
 };
 use activitypub_federation::config::{FederationConfig, FederationMiddleware};
@@ -28,17 +28,17 @@ use tracing::{field, info, info_span, Span};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod activities;
-mod blog_posts;
 mod database;
 mod error;
 #[allow(clippy::diverging_sub_expression, clippy::items_after_statements)]
 mod http;
+mod hugo_posts;
 mod objects;
 mod utils;
 
-const DOMAIN: &str = "fedi.flakm.com";
 const LOCAL_USER_NAME: &str = "blog_test2";
 const BIND_ADDRESS: &str = "127.0.0.1:3000";
+const DOMAIN: &str = "fedi.flakm.com";
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -66,8 +66,8 @@ async fn main() -> Result<(), Error> {
     info!("Migrations run");
 
     let posts_path = std::env::args().nth(1).expect("No posts file given");
-    let blog_repo = blog_posts::BlogRepository { db: pool.clone() };
-    let blog_posts = BlogPost::load_new_posts(posts_path).expect("Failed to load blog posts");
+    let blog_repo = hugo_posts::BlogRepository { db: pool.clone() };
+    let blog_posts = HugoBlogPost::load_new_posts(posts_path).expect("Failed to load blog posts");
 
     for blog_post in blog_posts {
         info!("Processing: {}", blog_post.slug);
@@ -102,18 +102,22 @@ async fn main() -> Result<(), Error> {
     let data = config.to_request_data();
     let mut to_be_published = vec![];
     for post in blog_repo.get_unpublished_blog_posts().await? {
-        let post = post.to_post(&local_user, data.domain())?;
-        to_be_published.push(post.clone());
+        let post = post.into_post(&local_user, data.domain())?;
+        to_be_published.push(post);
     }
 
-    tokio::spawn(async move {
+    let publish = async move {
+        // wait 5 seconds before publishing for the server to start
         tokio::time::sleep(Duration::from_secs(5)).await;
-        tracing::info!("Publishing posts");
+        tracing::info!("Publishing posts...");
+        to_be_published.sort_by(|a, b| a.blog_post.date.cmp(&b.blog_post.date));
         for post in to_be_published {
-            tracing::info!("Publishing post: {}", post.ap_id);
-            local_user.post(post, &data).await.unwrap();
+            tracing::info!("Publishing post: {}", post.blog_post.slug);
+            local_user.post(&post, &data).await.unwrap();
+            blog_repo.mark_as_published(&post.blog_post).await.unwrap();
         }
-    });
+        Ok::<_, Error>(())
+    };
 
     info!("Listen with HTTP server on {BIND_ADDRESS}");
     let config = config.clone();
@@ -122,7 +126,6 @@ async fn main() -> Result<(), Error> {
         .route("/:user/inbox", post(http_post_user_inbox))
         .route("/:user/followers", get(http_get_user_followers))
         .route("/.well-known/webfinger", get(webfinger))
-        .route("/followers", post(http_post_to_followers))
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(|request: &Request<_>| {
@@ -159,9 +162,24 @@ async fn main() -> Result<(), Error> {
         .to_socket_addrs()?
         .next()
         .expect("Failed to lookup domain name");
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await?;
+    let server = async {
+        axum::Server::bind(&addr)
+            .serve(app.into_make_service())
+            .await
+            .map_err(Error::from)
+    };
+
+    // use try_join to run the server and the publish task concurrently
+    let res = tokio::try_join!(server, publish);
+
+    match res {
+        Ok((_first, _second)) => {
+            // do something with the values
+        }
+        Err(err) => {
+            panic!("processing failed; error = {}", err);
+        }
+    };
 
     Ok(())
 }

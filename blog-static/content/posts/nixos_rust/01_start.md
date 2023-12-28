@@ -8,17 +8,17 @@ toc = true
 description = """
 Intro into series about setting up a personal blog, focusing on using NixOS for its simplicity and efficiency. 
 
-I discuss the rationale behind selecting non-mainstream tech tools and outline my key objectives for a low-maintenance, open-source, and flexible blogging platform.
+I discuss #null the rationale behind selecting non-mainstream tech tools and outline my key objectives for a low-maintenance, open-source, and flexible blogging platform.
 """
 
-tags = []
+tags = ["null"]
 +++ 
 
 ## Learning to ride a bicycle
 
-A year ago I've purchased two bikes for my dougther, navigating the tricky waters of sizing and pinkness.
+I purchased two bikes for my daughter a year ago, navigating the tricky waters of sizing and pinkness.
 
-It soon has become clear that the first was waay too big for her, and the second was just right.
+It soon became clear that the first was too big for her, and the second was just right.
 
 
 **Contents:**
@@ -31,68 +31,70 @@ It soon has become clear that the first was waay too big for her, and the second
 Consider the challenge of tackling a tech problem with a solution that's too 'big'. It quickly becomes unwieldy and awkward.
 
 The industry often doesn't align its incentives with helping us choose **the right solution™**.
-Products, typically address broad issues, appealing to a wide audience but introducing unnecessary complexity.
+Products typically address broad issues, appealing to a wide audience but introducing unnecessary complexity.
 
 We call the problems that we create and can solve **accidental complexity**.
 In contrast, **essential complexity** is inherent to the problem itself.
 It cannot be removed - it just is. [^1]
 
-In 2023, terms like: cloud, docker, kubernetes and serverless are ubiquitous in the dev/ops world, each offering different set of strengths:
+In 2023, terms like cloud, docker, kubernetes and serverless are ubiquitous in the dev/ops world, 
+each offering a different set of strengths:
 
-- *The cloud* excels in handling bursty loads, it doesn't scale economically for very steady loads.
-Just take a look at [reference architecture](https://docs.aws.amazon.com/whitepapers/latest/best-practices-wordpress/reference-architecture.html) for a WordPress deployment, it's not a simple strategy.
-And I'm for one sure that after implementing it will never leave AWS.
+- *The cloud* excels in handling bursty loads but doesn't scale economically for steady loads.
+A custom set of services provided by the vendor quickly leads to overcomplicated solutions
+Just look at [reference architecture](https://docs.aws.amazon.com/whitepapers/latest/best-practices-wordpress/reference-architecture.html) for a WordPress deployment. It's a ridiculously complex strategy. 
+And I'm for one sure that after implementation it will never leave AWS.
 
-- *Docker* is an amazing developer-focused tool that abstracts over a deployment runtime.
+- *Docker* is a fantastic developer-focused tool that abstracts over a deployment runtime.
 However, it can also give a false sense of security and lead to unexpected issues.
 
-- According to internet *kubernetes* won the war for the standard orchestration solution and probably rightfully so.
-But the basic - happy path experience differs greatly from when you have to understand the inner parts of the system. 
+- According to Internet, *kubernetes* won the war for the standard orchestration solution, and probably rightfully so.
+But the basic - happy path experience differs significantly from when you have to understand the inner parts of the system. 
 Many good things can be said about it, but it ain't simple.
-If you don't believe me go ahead and read a recent [changelog for version 1.27](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.27.md#changes-by-kind-1) and amazing postmortem for failed version migration at [reddit](https://www.reddit.com/r/kubernetes/comments/11xxsz1/long_detailed_post_mortem_on_a_reddit_failed_k8s/).
+If you don't believe me, read a recent [changelog for version 1.27](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.27.md#changes-by-kind-1) and amazing postmortem for failed version migration at [reddit](https://www.reddit.com/r/kubernetes/comments/11xxsz1/long_detailed_post_mortem_on_a_reddit_failed_k8s/).
 
-- *Serverless* promises to be extremely scalable and easy to architect your services.
-To get the full benefits with storage one has to use the accompanying data solutions (hosted services etc).
+- *Serverless* promises to be higlhly scalable and easy to architect your services.
+To get the full benefits of storage one has to use the accompanying data solutions (hosted services etc).
 Needless to say, it tends to introduce heavy vendor lock-in.
 
-None of these solutions may be ideal for small-scale deployments, as they tend to introduce more accidental complexity than they resolve.
+None of these solutions is ideal for small-scale deployments, as they introduce more accidental complexity than they resolve.
 
 ### My host, my rules
 
-Since I'm currently working on building my personal blog to become a part of a fediverse I thought I'll write the road trip down.
+Since I'm working on rebuilding my personal blog to become a part of a fediverse, I decided to write down the road trip.
 
 Here is my crazy plan - skip containerization and orchestrators. 
-Instead, I'll lean on the tried-and-true methods, spiced up with modern([?](https://en.wikipedia.org/wiki/NixOS#History)) tools like NixOS.
+Instead, I'll lean on the tried-and-true methods spiced up with modern([?](https://en.wikipedia.org/wiki/NixOS#History)) tools like NixOS.
 My goals for the project:
 
 1. **Low maintenance & cost** - it's just me here.
 2. **Open-source** - it's just better.
 3. **Efficiency** - I'm spending my time in the evenings. I aim to do things just once.
 4. **Self-documenting** - I might need to rediscover certain parts after a while, so making them self-explanatory is crucial.
-5. **No vendor/technology lock-in** - I want to avoid being boxed in by any vendor or technology, especially if they change their terms or pricing.
+5. **No vendor/technology lock-in** - I want to avoid being boxed in significantly by any vendor or technology if they change their terms or pricing.
 
 ### The Why behind the NixOs
 
-I've been using NixOS on my desktop daily for over a year, and it's been quite the experience. It seems to be gaining traction everywhere.
+I've been using NixOS on my desktop daily for over a year, and it's been quite the experience. It is gaining traction everywhere.
 
 So, what do NixOs (the declarative operating system), nix (the packaging system) offer? Here's my take:
 
-1. **Aggregation of system components** - like k8s with multiple helm charts but in declarative way. The state is held in your repository (kind of like argocd).
+1. **Aggregation of system components** - like k8s with multiple helm charts but in a declarative way. The state is held in your repository (kind of like argocd).
 2. **Meta build tool** - just like docker, nix is technology agnostic it doesn't care if it's rust, go, or java. 
 3. **Self-documentation** - since there is only one entry point to your system it is by default documented. You won't forget about this little docker container that you have run on the machine or this tiny tiny package on the OS.
 4. **Debuggability and testability** - NixOs configuration can be easily deployed onto a VM or tested using an automated testing framework
-5. [Reproducible builds](https://reproducible-builds.org/) - if you have the same source (most of the time) you will obtain bit for bit same result no matter when you run it. You can even read more about building 15yo software [here](https://blinry.org/nix-time-travel/). While in theory possible using [docker](https://fosdem.org/2023/schedule/event/container_reproducible_dockerfile/attachments/slides/5574/export/events/attachments/container_reproducible_dockerfile/slides/5574/FOSDEM2023_Bit_for_bit_reproducible_builds_with_Dockerfile.pdf) it's definietely not a practice.
-6. **No need to keep the binary data around** - this is due reproducibility of builds. The artifacts storing story turned out to be a big [docker kerfuffle](https://www.theregister.com/2023/03/17/docker_free_teams_plan/) recently.
-7. **Good practices encouraged**. It doesn't leave a shell mess. Strange one-off bash scripts casting dark spells.
+5. [Reproducible builds](https://reproducible-builds.org/) - if you have the same source (most of the time) you will obtain bit for bit the same result no matter when you run it. You can even read more about building 15yo software [here](https://blinry.org/nix-time-travel/). While in theory, possible using [docker](https://fosdem.org/2023/schedule/event/container_reproducible_dockerfile/attachments/slides/5574/export/events/attachments/container_reproducible_dockerfile/slides/5574/FOSDEM2023_Bit_for_bit_reproducible_builds_with_Dockerfile.pdf) it's definietely not a practice.
+6. **No need to keep the binary data around** - this is due to the reproducibility of builds. The artifacts storing story turned out to be a big [docker kerfuffle](https://www.theregister.com/2023/03/17/docker_free_teams_plan/) recently.
+7. **Sound practices are encouraged**. It doesn't leave a shell mess. Strange one-off bash scripts casting dark spells.
 
 
-The system I'd like to build up - my blog as of writing those words is a statically generated hugo site that is hosted using github pages.
+The system I'd like to build up - my blog as of writing those words is a statically generated Hugo site hosted using GitHub pages.
 There are many things wrong with it, but I like it (apart from writing regularly).
 
-My side quest is to use as few dockers and yaml lines as possible. *Because it's all fucking terrible and it should burn!*
+My side quest is to use as few dockers and yaml lines as possible. *Because it's all fucking terrible, and it should burn!*
 
-I'll be setting up the environment with Hetzner and Cloudflare, making it easy for others to replicate if they wish.
-Throughout this series, you'll see how simple it is to switch providers or even move to a self-hosted setup.
+I'll set up the environment with Hetzner and Cloudflare, making it easy for others to replicate.
+This series shows how simple it is to switch providers or even move to a self-hosted setup.
 
 Let's get started!
 
@@ -100,14 +102,14 @@ Let's get started!
 
 ### Initial project setup
 
-Since I'm a backend developer by day let's start with what I'm the most comfortable with.
-Lets create a subdirectory in the repository holding the static hugo blog.
+Since I'm a backend developer by day, let's start with what I'm the most comfortable with.
+Let's create a subdirectory in the repository holding the initial code.
 
 ```bash
 mkdir backend
 ```
 
-I suppose that you've read the [amazing blog series](https://fasterthanli.me/series/building-a-rust-service-with-nix) from Amos that I've mentioned before so I'm not going to show how to install nix and just go with it.
+I hope you've read the [amazing blog series](https://fasterthanli.me/series/building-a-rust-service-with-nix) from Amos by now, so I'm not going to show how to install nix and just go with it.
 
 ```bash
 cd backend
@@ -231,21 +233,21 @@ The results are stored using a content based hash.
 lrwxrwxrwx 1 flakm users 65 Dec  5 21:54 result -> /nix/store/c3hvg3l8k6a54h3g1bdw4xrmc3g09md9-quick-start-fmt-0.1.0
 ```
 
-Once computed nix is able to avoid doing recomputation because it knows none of the inputs have changed.
+Once computed, nix can avoid doing recomputation because it knows none of the inputs have changed.
 We will use this property later to ship the packages to our target machine!
 
 
-So we are now able to ship the binary. If we run `nix build` the result directory will contain ELF binary.
+So, we are now able to ship the binary. If we run `nix build` the result directory will contain ELF binary.
 
 ```bash
 ❯ file result/bin/quick-start
 result/bin/quick-start: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /nix/store/8xk4yl1r3n6kbyn05qhan7nbag7npymx-glibc-2.35-224/lib/ld-linux-x86-64.so.2, for GNU/Linux 3.10.0, not stripped
 ```
 
-In the [next post](../02_integration) I will cover exposing this code as a NixOs module that wraps our binary with the systemd service.
+In the [next post](../02_integration), I will expose this code as a NixOs module that wraps our binary with the systemd service.
 Plus, I'm excited to highlight a powerful feature of NixOS: integration tests using VMs, with QEMU as the backend!"
 
-If you want to see more of similar write-ups you might follow me on mastodon [@flakm](https://hachyderm.io/@flakm).
+If you want to see more similar write-ups, you might follow me on mastodon [@flakm](https://hachyderm.io/@flakm).
 
 
 [^1]: http://worrydream.com/refs/Brooks-NoSilverBullet.pdf

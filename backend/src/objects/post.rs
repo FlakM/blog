@@ -1,25 +1,35 @@
+use crate::DOMAIN;
 use crate::{
-    activities::create_post::CreatePost, database::Repository, error::Error, generate_object_id,
-    objects::person::DbUser,
+    database::Repository, error::Error, hugo_posts::HugoBlogPost, objects::person::DbUser,
 };
 use activitypub_federation::{
     config::Data,
     fetch::object_id::ObjectId,
     kinds::{object::NoteType, public},
     protocol::{helpers::deserialize_one_or_many, verification::verify_domains_match},
-    traits::{Actor, Object},
+    traits::Object,
 };
 use activitystreams_kinds::link::MentionType;
-use serde::{Deserialize, Serialize};
-use tracing::info;
+use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
 use url::Url;
 
 #[derive(Clone, Debug)]
-pub struct DbPost {
-    pub text: String,
-    pub ap_id: ObjectId<DbPost>,
+pub struct FediPost {
+    pub ap_id: ObjectId<FediPost>,
     pub creator: ObjectId<DbUser>,
     pub local: bool,
+    pub blog_post: HugoBlogPost,
+}
+
+impl FediPost {
+    pub fn render_content(&self) -> String {
+        format!(
+            r#"<p><b>{title}</b></p><p>{description}</p><p><a href="{url}">Read more</a></p>"#,
+            title = self.blog_post.title,
+            description = self.blog_post.description,
+            url = self.blog_post.url,
+        )
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -27,13 +37,33 @@ pub struct DbPost {
 pub struct Note {
     #[serde(rename = "type")]
     kind: NoteType,
-    id: ObjectId<DbPost>,
+    id: ObjectId<FediPost>,
     pub(crate) attributed_to: ObjectId<DbUser>,
     #[serde(deserialize_with = "deserialize_one_or_many")]
     pub(crate) to: Vec<Url>,
     content: String,
-    in_reply_to: Option<ObjectId<DbPost>>,
-    tag: Vec<Mention>,
+    in_reply_to: Option<ObjectId<FediPost>>,
+    tag: Vec<MyCustomMention>,
+}
+
+/// Represents a hashtag mention accepted by Mastodon
+#[derive(Debug, Clone, Deserialize)]
+pub struct Hashtag(String);
+
+impl Serialize for Hashtag {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let name = &self.0;
+        let hashtag = format!("#{}", name);
+        let href = format!("https://{DOMAIN}/tags/{name}");
+        let mut state = serializer.serialize_struct("Hashtag", 3)?;
+        state.serialize_field("name", &hashtag)?;
+        state.serialize_field("type", "Hashtag")?;
+        state.serialize_field("href", &href)?;
+        state.end()
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -43,8 +73,15 @@ pub struct Mention {
     pub kind: MentionType,
 }
 
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum MyCustomMention {
+    Hashtag(Hashtag),
+    Mention(Mention),
+}
+
 #[async_trait::async_trait]
-impl Object for DbPost {
+impl Object for FediPost {
     type DataType = Repository;
     type Kind = Note;
     type Error = Error;
@@ -56,16 +93,30 @@ impl Object for DbPost {
         Ok(None)
     }
 
+    async fn from_json(
+        _json: Self::Kind,
+        _data: &Data<Self::DataType>,
+    ) -> Result<Self, Self::Error> {
+        unimplemented!()
+    }
+
     async fn into_json(self, data: &Data<Self::DataType>) -> Result<Self::Kind, Self::Error> {
         let creator = self.creator.dereference(data).await?;
+        let content = self.render_content();
         Ok(Note {
             kind: Default::default(),
             id: self.ap_id,
             attributed_to: creator.ap_id,
             to: vec![public()],
-            content: self.text,
+            content,
             in_reply_to: None,
-            tag: vec![],
+            tag: self
+                .blog_post
+                .tags
+                .unwrap_or_default()
+                .iter()
+                .map(|tag| MyCustomMention::Hashtag(Hashtag(tag.to_string())))
+                .collect(),
         })
     }
 
@@ -76,36 +127,5 @@ impl Object for DbPost {
     ) -> Result<(), Self::Error> {
         verify_domains_match(json.id.inner(), expected_domain)?;
         Ok(())
-    }
-
-    async fn from_json(json: Self::Kind, data: &Data<Self::DataType>) -> Result<Self, Self::Error> {
-        info!(
-            "Received post with content {} and id {}",
-            &json.content, &json.id
-        );
-        let creator = json.attributed_to.dereference(data).await?;
-        let post = DbPost {
-            text: json.content,
-            ap_id: json.id.clone(),
-            creator: json.attributed_to.clone(),
-            local: false,
-        };
-
-        let mention = Mention {
-            href: creator.ap_id.clone().into_inner(),
-            kind: Default::default(),
-        };
-        let note = Note {
-            kind: Default::default(),
-            id: generate_object_id(data.domain())?.into(),
-            attributed_to: data.blog_user().await?.ap_id,
-            to: vec![public()],
-            content: format!("Hello {}", creator.name),
-            in_reply_to: Some(json.id.clone()),
-            tag: vec![mention],
-        };
-        CreatePost::send(note, creator.shared_inbox_or_inbox(), data).await?;
-
-        Ok(post)
     }
 }

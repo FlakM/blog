@@ -1,10 +1,7 @@
 use crate::{
     database::Repository,
     error::Error,
-    objects::{
-        person::{DbUser, Person, PersonAcceptedActivities},
-        post::DbPost,
-    }, utils::generate_object_id,
+    objects::person::{DbUser, Person, PersonAcceptedActivities},
 };
 use activitypub_federation::{
     axum::{
@@ -75,21 +72,6 @@ pub async fn webfinger(
         query.resource,
         db_user.ap_id.into_inner(),
     )))
-}
-
-#[debug_handler]
-pub async fn http_post_to_followers(data: Data<Repository>) -> Result<impl IntoResponse, Error> {
-    let local_user = data.blog_user().await?;
-    let post = DbPost {
-        text: "<p>Hello worl</p>".to_string(),
-        ap_id: generate_object_id(data.domain())?.into(),
-        creator: local_user.ap_id.clone(),
-        local: true,
-    };
-
-    local_user.post(post, &data).await?;
-
-    Ok(StatusCode::OK)
 }
 
 #[debug_handler]
