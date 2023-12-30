@@ -14,6 +14,12 @@ enableEmoji = true
 [markup.highlight]
 style = "rrt"
 
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+
 [taxonomies]
   category = "categories"
   series = "series"

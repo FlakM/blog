@@ -1,19 +1,19 @@
----
-title: "Screaming at the clouds ☁️"
-date: 2023-12-04T15:00:00+02:00
-draft: true
++++
+title= "Screaming at the clouds ☁️"
+date= 2023-12-04T15:00:00+02:00
+draft= true
 
-series: ["Simple personal blog"]
+series= ["Simple personal blog"]
 
-description: '
-Provision VM with DNS records and cloudflare caching.
-'
----
+description = """
+Learn how to provision VM on the cloud with DNS records and cloudflare caching.
+"""
++++
 
 ## About the infrastructure
 
 I'll provision the environment using Hetzner and Cloudflare.
-This is not perfect but it will be simple to maintain and follow.
+The process could be better but should be simple to maintain and follow.
 
 
 **Contents:**
@@ -22,14 +22,13 @@ This is not perfect but it will be simple to maintain and follow.
 
 ### Provisioning all the things
 
-To host the code I'll need two things:
+To host the code, I'll need two things:
 
 1. A DNS domain - `flakm.com`
 2. A NixOs server that will host code
 
-The server should be reachable for ssh (at least at the beginning) and have port 443 opened and a valid TLS certificate.
-
-Since [native support for NixOs on major cloud providers](https://nixos.wiki/wiki/NixOS_friendly_hosters) is lacking I've used amazing project [nixos-anywhere](https://github.com/nix-community/nixos-anywhere) in conjuction with `tofu` server provisioning code taken straight from examples for ptovider.
+Since [native support for NixOs on major cloud providers](https://nixos.wiki/wiki/NixOS_friendly_hosters) is lacking, 
+I've used fantastic project [nixos-anywhere](https://github.com/nix-community/nixos-anywhere) with `tofu` server provisioning code taken straight from provider examples.
 Prerequisites for provisioning the instance are:
 
 1. [Hetzner API token](https://docs.hetzner.com/cloud/api/getting-started/generating-api-token/)
@@ -38,11 +37,11 @@ Prerequisites for provisioning the instance are:
 
 ### Environment setup
 
-I'm using a [yubikey smart card with gpg agent for ssh authentication](https://github.com/drduh/YubiKey-Guide#configure-smartcard) and my public key is located in `~/.ssh/id_rsa_yubikey.pub`.
+I'm using a [yubikey smart card with a gpg agent for ssh authentication](https://github.com/drduh/YubiKey-Guide#configure-smartcard), and my public key is located in `~/.ssh/id_rsa_yubikey.pub`.
 
-I like this setup, the key never touched the disk on my computer. But there is no problem if you don't have one you might just use plain ssh keys.
+I like this setup, and the key never touched the disk on my computer. But there is no problem if you don't have one. You might just use plain ssh keys.
 
-Once you have all the other prerequisites setup you will need the following environment variables:
+Once you have all the other prerequisites nailed down, you will need the following environment variables:
 
 ```bash
 export CLOUDFLARE_API_TOKEN="..." # account token
@@ -54,8 +53,8 @@ export TF_VAR_ZONE_ID="" # Cloud flare zone id
 
 ### Host declarative configuration
 
-The NixOs configuration was inspired by nixos-anywhere [examples](https://github.com/numtide/nixos-anywhere-examples).
-Entry point to configuration is located in `flake.nix`
+Nixos-anywhere [examples](https://github.com/numtide/nixos-anywhere-examples) inspired the NixOs configuration.
+The entry point to the configuration is in a flake.nix
 
 ```nix
 # flake.nix
@@ -104,7 +103,7 @@ Entry point to configuration is located in `flake.nix`
 }
 ```
 
-My root flake imports host's configuration located in `configuration.nix`
+My root flake imports host's configuration located in `configuration.nix`:
 
 ```nix
 # configuration.nix
@@ -247,16 +246,14 @@ module "install" {
 }
 ```
 
-To run it you will have to first setup your environment. The flake in project's repository contains `devShell` section that provides the binaries required to run it.
-If you have [direnv integration](https://nixos.wiki/wiki/Flakes#Direnv_integration) one time setup you will just need to run following command:
+To run it, you will have to set up your environment. The flake in the project's repository contains a `devShell` section that provides the binaries required to run it.
+If you have [direnv integration](https://nixos.wiki/wiki/Flakes#Direnv_integration) enabled, you will need to run the following command:
 
 ```bash
 direnv allow
 ```
 
-
-
-And your shell will magically receive all the required binaries. To deploy the code run:
+And your shell will magically receive all the required binaries. To deploy the code, run:
 
 
 ```bash
@@ -264,14 +261,14 @@ tofu init # downloads the providers
 tofu apply
 ```
 
-At this point after couple of minutes you should be able to check the DNS address.
-It should point to valid ip address of the machine that you have just created:
+After a couple of minutes, you should be able to check the DNS address.
+It should point to the valid ip address of the machine that you have just created:
 
 ```bash
 nslookup blog.flakm.com
 ```
 
-If it does you should be able to login to the machine using ssh: 
+If it does, you should be able to log in to the machine using ssh:
 
 ```bash
 ssh root@blog.flakm.com
@@ -279,7 +276,7 @@ ssh root@blog.flakm.com
 
 ### Job well done
 
-At this point I've managed to create following resources:
+At this point, We've managed to create the following resources:
 
 1. Hetzner instance with public IP with ssh that gives root access
 2. DNS A record that points to our instance
@@ -387,8 +384,8 @@ Nginx and acme are inspired by [NixOs wiki entry for nginx wiki](https://nixos.w
 It uses Acme bot to set up TLS certificate for our backend. 
 Finally, it enables and configures our service called `backend`
 
-And here is the part that seemed absolutely magic to me. 
-If we want to deploy our flake to the machine we'll have to just run the:
+And here is the part that seemed magic to me. 
+If we want to deploy our flake to the machine, we'll have to run the following:
 
 ```bash
 nixos-rebuild --flake .#blog \
@@ -412,7 +409,7 @@ reloading user units for root...
 setting up tmpfiles
 ```
 
-Can it be working already? Let's check in the browser, it can not be that simple!
+Can it be working already? Let's check in the browser.
 
 {{< figure src="/images/page_working.png" class="img-sm">}}
 
@@ -436,17 +433,20 @@ alt-svc: h3=":443"; ma=86400
 ```
 
 It is working, and caching works! 
-Also, notice that at no point did I mention installing any binary on your system (like `tofu` or `docker`). It's been all taken care of by direnv configuration and nix's magic.
+
+Also, notice that I did not mention installing any binary on your system (like `tofu` or `docker`). It's been all taken care of by direnv configuration and nix's magic.
 
 ### Summary
 
-So to sum up. Until now we managed to:
+So, to sum up. Until now, we managed to:
 
-1. Build a flake that wraps a hello world rust server with series of checks
-2. Expose backend flake as a NixOs module with 2 flags that runs binary using systemd service
-3. Write opentofu module that provisions our machines, DNS records and configures Cloudflare to cache the content
+1. Build a flake that wraps a Hello World rust server with a series of checks
+2. Expose backend flake as a NixOs module with two flags that run binary using the systemd service
+3. Write opentofu module that provisions our machines, DNS records, and configures Cloudflare to cache the content
 4. Provision resources
-5. Write flake that takes backend as an input and configures nginx with ACME bot for valid TLS configuration
+5. Write flake that takes the backend as input and configures nginx with ACME bot for valid TLS configuration
 6. Deploy that flake to production using a single command that could be easily performed on CI
 
-Not too bad for such a simple setup, right?
+It's not too bad for such a simple setup.
+
+In the next entry, I'll write down how to secure the host using wireguard derivative and add some hardening to services before adding ActivityPub integration to the backend.
