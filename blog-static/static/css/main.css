@@ -1,0 +1,69 @@
+/* put conde here */
+
+.bg-top {
+    background-position: center;
+}
+
+
+@media only screen and (min-width: 1000px) {
+.mw8 {
+  max-width: 50vw;
+}
+
+pre {
+  width: 70vw;
+  position: relative;
+  left: 10%;
+  right: 10%;
+  margin-left: -15vw;
+  margin-right: -15vw; 
+}
+
+.img-lg {
+  width: 70vw;
+  position: relative;
+  left: 10%;
+  right: 10%;
+  margin-left: -15vw;
+  margin-right: -15vw; 
+}
+}
+
+pre {
+    margin-top: 2em;
+    margin-bottom: 2em;
+}
+
+.img-lg {
+    margin-top: 2em;
+    margin-bottom: 2em;
+}
+
+aside {
+    visibility: hidden;
+}
+
+.w-two-thirds-l {
+  width: 100%;
+}
+
+.my-table table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  
+.my-table th, td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+  }
+
+  
+.my-table tr:hover {background-color: rgba(243, 235, 235, 0.911);}
+
+
+.danger {
+  background-color: #ffdddd;
+  border-left: 6px solid #f44336;
+}
+

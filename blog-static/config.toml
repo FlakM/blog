@@ -1,0 +1,89 @@
+baseURL = "https://flakm.com/"
+languageCode = "en"
+defaultContentLanguage = "en"
+
+copyright = "Copyright © 2023, Maciej Flak; all rights reserved."
+
+title = "FlakM blog"
+theme = "hugo-coder"
+
+paginate = 20
+enableEmoji = true
+
+
+[markup.highlight]
+style = "rrt"
+
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+
+[taxonomies]
+  category = "categories"
+  series = "series"
+  tag = "tags"
+
+# Menu links
+[[menu.main]]
+  name = "Blog"
+  weight = 1
+  url  = "posts/"
+[[menu.main]]
+  name = "Series"
+  weight = 2
+  url  = "series/"
+[[menu.main]]
+  name = "About"
+  weight = 3
+  url = "about/"
+
+
+[params]
+  author = "Maciek Flak"
+  info = "Just a minimalist coder"
+  description = "simple coder blog"
+  keywords = "blog,developer,personal"
+  avatarurl = "images/avatar.jpg"
+
+  dateFormat = "January 2, 2006"
+
+  favicon = "images/favicon.ico"
+
+  colorScheme = "auto"
+  hidecolorschemetoggle = false
+  # Custom CSS and JS. Relative to /static/css and /static/js respectively.
+  custom_css = [
+    "css/main.css"
+  ]
+
+  
+
+
+[[params.social]]
+    name = "Github"
+    icon = "fa fa-github"
+    weight = 1
+    url = "https://github.com/flakm/"
+
+[[params.social]]
+    name = "Mastodon"
+    icon = "fa fa-mastodon"
+    weight = 2
+    url = "https://hachyderm.io/@flakm"
+    rel = "me noopener"
+
+
+
+[outputFormats.BlogListJSON]
+mediaType = "application/json"
+baseName = "bloglist"
+isPlainText = true
+
+[outputs]
+home = ["HTML", "RSS", "BlogListJSON"]
+
+[params.plausibleAnalytics]
+  domain = "flakm.com"
+  serverURL = "plausible.flakm.com"

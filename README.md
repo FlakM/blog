@@ -1,31 +1,32 @@
-# About
+# blog_deployment
 
-Installation
 
 ```bash
-git submodule update --init --recursive
-nix-shell -p '(import <nixos-unstable> {}).hugo'
+# enable direnv integration
+direnv allow
+
+
+# check if env variables are setup in current shell without passing them to history
+source  ./setup.sh
+
+
+# unset if you've made a mistake
+tofu init
+tofu plan
 ```
 
-Running server
+Once the `tofu apply` is done there should be a ssh key in the directory that enables us to connect to the machine:
 
 ```bash
-hugo server -D
+ssh root@blog.flakm.com
 ```
 
-Creating new post:
+## Updating the provisioned nixos host
+
+After provisioning NixOs host you might just modify any of `*.nix` files and use:
 
 ```bash
-hugo new posts/my-first-post.md
+nixos-rebuild switch --target-host root@blog.flakm.com --flake .#blog
 ```
 
-Updating theme:
 
-Blog is using [ananke theme](https://github.com/theNewDynamic/gohugo-theme-ananke)
-
-
-## CI/CD 
-
-Each CI job deploys code to flakm-test repository available under: https://flakm.github.io/flakm-test/
-
-Master branch is deployed to https://flakm.github.io/
