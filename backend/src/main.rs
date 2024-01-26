@@ -36,7 +36,7 @@ mod hugo_posts;
 mod objects;
 mod utils;
 
-const LOCAL_USER_NAME: &str = "blog_test2";
+const LOCAL_USER_NAME: &str = "blog";
 const BIND_ADDRESS: &str = "127.0.0.1:3000";
 const DOMAIN: &str = "fedi.flakm.com";
 

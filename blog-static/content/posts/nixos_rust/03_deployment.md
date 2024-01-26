@@ -1,7 +1,7 @@
 +++
 title= "Screaming at the clouds ☁️"
 date= 2023-12-04T15:00:00+02:00
-draft= true
+draft= false
 
 series= ["Simple personal blog"]
 
