@@ -34,7 +34,8 @@ Here are my tips that make this process far more enjoyable.
 
 ## Using `grep` to locate strings
 
-Nowadays, `grep` has become ubiquitous. Most linux distributions ship it by default.
+`grep` was released over 50 years ago and has become ubiquitous for text searching.
+Even though there might be a more modern alternative, it's still an invaluable tool since most linux distributions ship it by default.
 I find myself reaching for it when I have a file or directory and a pattern to look for or a command with long output like curl with `-i` flag, but I’m only interested in a small subset of specific headers.
 
 `grep` will simply print the lines that match the given pattern. For instance, imagine we want to find references to `atuin` in the dotfiles directory.
@@ -149,7 +150,7 @@ Other use cases I tend to use:
 
 - `fd`, [`proximity-sort`](https://github.com/jonhoo/proximity-sort) and [`fzf`](https://github.com/junegunn/fzf) to create [smart goto utility](https://github.com/FlakM/nix_dots/blob/66d7942bdbe1a7dcacfc5f6b2818f46c5da78987/home-manager/modules/nvim/config/init.vim#L216) for vim
 - `curl` with pipe to `grep` to locate specific headers like: `curl "https://google.com" -i 2>/dev/null | grep cache`
--  
+- As suggested by [supafly1974](https://www.reddit.com/r/linux/comments/1bpvkuz/comment/kx0o6ne) `history | cut -c 8- | sort -u | fzf +m -e | tr -d '\\n' | xclip -selection c`
 
 ## Looking back in history with `git`
 
@@ -226,6 +227,7 @@ It doesn't show files that are ignored by `.gitignore` it has nice colors. It's 
 ```
 ## Finding shell history items with atuin
 
+
 I regret not knowing about `CTRL+R` and `history` for a couple of years of using linux. 
 But in this case, there is also an amazing utility that can do it.
 [`atuin`](https://github.com/atuinsh/atuin) is a must-use tool.
@@ -243,3 +245,25 @@ It uses fuzzy logic to find relevant commands.
 ```bash
 z ripgrep # changes CWD to highest ranked directory matching ripgrep, ie /home/me/code/ripgrep
 ```
+
+## Finding what is eating up the disk space
+
+Without resorting to tui tools like `ncdu` we can check it by using `du` chained with sort and head (as suggested by [BigHeadTonyT](https://www.reddit.com/r/linux/comments/1bpvkuz/comment/kwz2pze/)).
+
+```bash
+du -h ~ | sort -hr | head -n 10
+```
+
+But as always, there is a more modern alternative called dust that has a similar syntax:
+
+```bash
+dust ~ -n 10
+```
+Here is an [`asciinema`](https://asciinema.org/) recording comparing the output of those two tools:
+
+{{< unsafe >}}
+<script src="https://asciinema.org/a/ofH2tuxqWpSrmnPzIBBLZsspI.js" id="asciicast-649642" async="true"></script>
+{{< /unsafe >}}
+
+Notice how the `du` version took over 4 seconds on a single core, and the `dust` finished in 0.6 seconds and returned arguably more insightful information.
+

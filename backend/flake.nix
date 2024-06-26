@@ -92,16 +92,24 @@
                 serviceConfig = {
                   Restart = "on-failure";
                   ExecStart = "${server}/bin/backend ${config.services.backend.posts_path}";
+                  # dynamically allocate new user and release them when the service stops
                   DynamicUser = true;
+                  # mounts an empty tmpfs read only filesystem over the the space-separated list of filesystem paths you pass it
                   TemporaryFileSystem = "/:ro";
+                  # /var/lib/backend will be mounted to the service
                   BindPaths = "/var/lib/backend";
+                  # ensures that directory backend exists under /var/lib and has correct ownership
                   StateDirectory = "backend";
+                  # sets working directory of process to this value
                   WorkingDirectory = "/var/lib/backend";
+                  # the entire file system hierarchy is mounted read-only, except for the API file system subtrees /dev, proc and /sys
                   ProtectSystem = "strict";
+                  # the directories /home, /root and /run/user are made inaccessible and empty for processes invoked by this unit
                   ProtectHome = true;
+                  # sets up a new file system namespace for the executed processes and mounts private /tmp and /var/tmp directories inside it
                   PrivateTmp = true;
+                  # hat the service process and all its children can never gain new privileges through `execve()`
                   NoNewPrivileges = true;
-
                 };
                 environment = {
                   "RUST_LOG" = "INFO";

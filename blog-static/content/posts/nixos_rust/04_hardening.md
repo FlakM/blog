@@ -11,7 +11,7 @@ externalLink = ""
 series = ["Simple personal blog"]
 
 description="""
-Adding a tailscale goodness and systemd properties
+Securing a hostname with private tunnel and hardening systemd configuration.
 """
 
 +++
@@ -19,11 +19,12 @@ Adding a tailscale goodness and systemd properties
 
 ## Setting up tailscale
 
-One sad thing is that currently the host exposes ssh over the internet. There is also a risk of accidentaly exposing another service.
-To mitigate this risk we can use modern vpns and add additional firewalls on hetzner side.
+One sad thing is that the host currently exposes SSH over the Internet.
+There is also a risk of accidentally exposing another service.
+To mitigate this risk, we can use modern VPNs and add additional firewalls on the Hetzner side.
 
-To avoid the hustle of managing my own keys I'll be using a generous tailscale's free tier.
-To enable tailscale we'll have to add one line in our configuration:
+To avoid the hassle of managing my keys, I’ll be using a generous tailscale free tier.
+To enable tailscale, we’ll have to add one line in our configuration:
 
 ```nix
 # configuration.nix
@@ -31,7 +32,7 @@ services.tailscale.enable = true;
 ```
 
 After switching to this configuration we can manually over ssh configure tailscale using `tailscale login` to attach new node to our tail net.
-Tailscale uses persistant ips, we can check by using `ip` command:
+Tailscale uses persistent ips, we can check by using `ip` command:
 
 ```bash
 [root@nixos:~/blog]# ip addr show tailscale0
@@ -40,9 +41,6 @@ Tailscale uses persistant ips, we can check by using `ip` command:
     inet 100.96.101.15/32 scope global tailscale0
        valid_lft forever preferred_lft forever
 ...
-```
-
-
 
 
 ## Exposing only the intended ports
@@ -124,7 +122,6 @@ resource "hcloud_server" "blog" {
 }
 ```
 
-
 And now, after fast `tofu apply` the ssh is no longer publicly available:
 
 ```bash
@@ -141,17 +138,55 @@ PORT    STATE SERVICE
 443/tcp open  https
 ```
 
-Even if I start some network service it will not be accessible by accident like with sshd:
+Even if I start some network service, it will not be accessible by accident like with sshd:
 
 ```bash
 ❯ ssh root@blog.flakm.com
 ssh: connect to host blog.flakm.com port 22: Connection refused
 ```
 
-But the connection via ssh will be still available if we use the tailscale's dns name:
+But the connection via ssh will still be available if we use the tailscale's dns name:
 
 {{< 
     figure src="/images/nixos_rust/ssh-pony.png" class="img-lg" 
     caption= "Cute and secure pony over ssh over tailscale connection"
 >}}
+
+## Hardening the backend service
+
+Since we are using systemd under the hood we can now change the backend service to have additional systemd settings:
+
+```nix
+systemd.services.backend = {
+  serviceConfig = {
+    Restart = "on-failure";
+    ExecStart = "${server}/bin/backend ${config.services.backend.posts_path}";
+    # dynamically allocate new user and release them when the service stops
+    DynamicUser = true;
+    # mounts an empty tmpfs read only filesystem over the the space-separated list of filesystem paths you pass it
+    TemporaryFileSystem = "/:ro";
+    # /var/lib/backend will be mounted to the service
+    BindPaths = "/var/lib/backend";
+    # ensures that directory backend exists under /var/lib and has correct ownership
+    StateDirectory = "backend";
+    # sets working directory of process to this value
+    WorkingDirectory = "/var/lib/backend";
+    # the entire file system hierarchy is mounted read-only, except for the API file system subtrees /dev, proc and /sys
+    ProtectSystem = "strict";
+    # the directories /home, /root and /run/user are made inaccessible and empty for processes invoked by this unit
+    ProtectHome = true;
+    # sets up a new file system namespace for the executed processes and mounts private /tmp and /var/tmp directories inside it
+    PrivateTmp = true;
+    # hat the service process and all its children can never gain new privileges through `execve()`
+    NoNewPrivileges = true;
+  };
+  environment = {
+    "RUST_LOG" = "INFO";
+    "DATABASE_PATH" = "/var/lib/backend/db.sqlite3";
+  };
+};
+```
+
+You can read more about systemd features [here](https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html).
+I was surprised by the number of knobs one can turn with systemd in this department.
 

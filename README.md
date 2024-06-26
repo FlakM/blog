@@ -18,7 +18,7 @@ tofu plan
 Once the `tofu apply` is done there should be a ssh key in the directory that enables us to connect to the machine:
 
 ```bash
-ssh root@blog.flakm.com
+ssh root@hetzner-blog
 ```
 
 ## Updating the provisioned nixos host
@@ -26,7 +26,7 @@ ssh root@blog.flakm.com
 After provisioning NixOs host you might just modify any of `*.nix` files and use:
 
 ```bash
-nixos-rebuild switch --target-host root@blog.flakm.com --flake .#blog
+nixos-rebuild switch --target-host root@hetzner-blog --flake .#blog
 ```
 
 
