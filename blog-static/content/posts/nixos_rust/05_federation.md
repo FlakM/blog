@@ -1,6 +1,6 @@
 +++ 
 draft = true
-date = 2023-12-20T14:16:11+01:00
+date = 2024-06-28T08:37:45+01:00
 title = "Making the blog federated"
 slug = ""
 authors = []

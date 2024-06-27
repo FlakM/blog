@@ -8,6 +8,10 @@ series = ["Simple personal blog"]
 description = """
 Expose the blazing fast code using NixOs module and write a fancy integration test.
 """
+
+tags = ["nixos", "blog"]
+categories = ["nixos", "blog"]
+mastodonName = "@flakm@hachyderm.io"
 +++
 
 ## Let's expose the flake!

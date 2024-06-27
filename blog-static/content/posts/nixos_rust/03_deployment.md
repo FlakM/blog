@@ -8,6 +8,10 @@ series= ["Simple personal blog"]
 description = """
 Learn how to provision VM on the cloud with DNS records and cloudflare caching.
 """
+
+
+categories = ["nixos", "blog"]
+tags = ["nixos", "devops", "blog"]
 +++
 
 ## About the infrastructure

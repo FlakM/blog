@@ -74,6 +74,13 @@ style = "rrt"
     url = "https://hachyderm.io/@flakm"
     rel = "me noopener"
 
+[[params.social]]
+    name = "RSS"
+    icon = "fa fa-rss"
+    weight = 3
+    url = "/index.xml"
+    rel = "me noopener"
+
 
 
 [outputFormats.BlogListJSON]

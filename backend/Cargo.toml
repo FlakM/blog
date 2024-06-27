@@ -51,7 +51,7 @@ axum-macros = "0.3.8"
 
 #activitypub_federation = "0.5.0-beta.5"
 # take from git git@github.com:FlakM/activitypub-federation-rust.git
-activitypub_federation = { git = "https://github.com/FlakM/activitypub-federation-rust.git"}
+activitypub_federation = "0.5.6"
 
 
 tokio = { version = "1.35.0", features = ["full"] }

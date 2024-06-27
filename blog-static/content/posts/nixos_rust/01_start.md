@@ -3,12 +3,15 @@ title = "Measure twice cut once with NixOs"
 date = 2023-11-10T12:00:00+02:00
 draft = false
 series = ["Simple personal blog"]
+
+
 toc = true
 
 description = """
 Discover the benefits of using NixOS for building a personal, federated blog in my latest series. Follow along as we explore its simplicity and efficiency.
 """
 
+categories = ["nixos", "blog"]
 tags = ["rust", "nixos", "hugo", "blog"]
 mastodonName = "@flakm@hachyderm.io"
 +++ 

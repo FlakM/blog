@@ -1,18 +1,21 @@
 +++ 
-draft = true
-date = 2023-12-20T08:37:45+01:00
+draft = false
+date = 2024-06-27T08:37:45+01:00
 title = "Securing the blog host"
 slug = ""
 authors = []
-tags = []
-categories = []
 externalLink = ""
 
 series = ["Simple personal blog"]
 
 description="""
-Securing a hostname with private tunnel and hardening systemd configuration.
+🔒 Securing My Server with Tailscale & Systemd! 🔧
+
+I dive into setting up Tailscale VPN on Hetzner to secure SSH access and manage firewall rules effortlessly! 
+🚀 I also share how I hardened my backend services with advanced systemd settings. Perfect for fellow tech enthusiasts looking to boost server security. 🛡️
 """
+
+tags = ["nixos", "security", "devops", "blog"]
 
 +++
 
@@ -23,7 +26,7 @@ One sad thing is that the host currently exposes SSH over the Internet.
 There is also a risk of accidentally exposing another service.
 To mitigate this risk, we can use modern VPNs and add additional firewalls on the Hetzner side.
 
-To avoid the hassle of managing my keys, I’ll be using a generous tailscale free tier.
+To avoid the hassle of managing my keys, I’ll be using a generous [tailscale](https://tailscale.com/unplugged) free tier.
 To enable tailscale, we’ll have to add one line in our configuration:
 
 ```nix
@@ -31,8 +34,8 @@ To enable tailscale, we’ll have to add one line in our configuration:
 services.tailscale.enable = true;
 ```
 
-After switching to this configuration we can manually over ssh configure tailscale using `tailscale login` to attach new node to our tail net.
-Tailscale uses persistent ips, we can check by using `ip` command:
+After switching to this configuration, we can manually over ssh configure tailscale using `tailscale login` to attach a new node to our tail net.
+Tailscale uses persistent ips that we can check by using `ip` command:
 
 ```bash
 [root@nixos:~/blog]# ip addr show tailscale0
@@ -154,7 +157,7 @@ But the connection via ssh will still be available if we use the tailscale's dns
 
 ## Hardening the backend service
 
-Since we are using systemd under the hood we can now change the backend service to have additional systemd settings:
+Since we are using systemd under the hood, we can now change the backend service to have additional systemd settings:
 
 ```nix
 systemd.services.backend = {

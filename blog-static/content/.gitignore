@@ -1,0 +1,4 @@
+target/
+perf.data*
+out.profile-folded
+stacks.folded

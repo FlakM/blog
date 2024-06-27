@@ -92,6 +92,11 @@ variable "ZONE_ID" {
   # export TF_VAR_ZONE_ID="..."
 }
 
+variable "CODER_ZONE_ID" {
+  # Environment variable for Cloudflare Zone ID
+  # export TF_VAR_CODER_ZONE_ID="..."
+}
+
 # Cloudflare DNS A record configuration for the blog
 # This is used for the blog to be accessible directly via the IP ip address
 # The blog will be also accessible via the domain name behind the Cloudflare proxy
@@ -100,6 +105,15 @@ variable "ZONE_ID" {
 resource "cloudflare_record" "blog_nginx" {
   zone_id = var.ZONE_ID
   name    = "blog.flakm.com"
+  value   = hcloud_server.blog.ipv4_address
+  type    = "A"
+  proxied = false  # Direct DNS, no Cloudflare proxy
+}
+
+
+resource "cloudflare_record" "landing_nginx" {
+  zone_id = var.CODER_ZONE_ID
+  name    = "landing.coderkata.dev"
   value   = hcloud_server.blog.ipv4_address
   type    = "A"
   proxied = false  # Direct DNS, no Cloudflare proxy
@@ -131,6 +145,16 @@ resource "cloudflare_record" "blog" {
   proxied = true  # Enable Cloudflare proxy
 }
 
+
+# Cloudflare DNS CNAME record for the blog behind Cloudflare proxy
+resource "cloudflare_record" "landing" {
+  zone_id = var.CODER_ZONE_ID
+  name    = "@"
+  value   = "landing.coderkata.dev"
+  type    = "CNAME"
+  proxied = true  # Enable Cloudflare proxy
+}
+
 # Configure settings for the flakm.com domain in Cloudflare
 resource "cloudflare_zone_settings_override" "flakm-com-settings" {
   zone_id = var.ZONE_ID
@@ -143,10 +167,33 @@ resource "cloudflare_zone_settings_override" "flakm-com-settings" {
   }
 }
 
+resource "cloudflare_zone_settings_override" "coderkata-dev-settings" {
+  zone_id = var.CODER_ZONE_ID
+
+  settings {
+    tls_1_3                  = "on"
+    automatic_https_rewrites = "on"
+    ssl                      = "full" # strict doesn't work for some reason...
+    cache_level              = "aggressive"
+  }
+}
+
+
 # Cloudflare page rule for caching and optimizations
 resource "cloudflare_page_rule" "blog" {
   zone_id = var.ZONE_ID
   target = "https://flakm.com"
+  priority = 1
+
+  actions {
+    cache_level = "cache_everything"  # Cache HTML and other assets
+  }
+}
+
+# Cloudflare page rule for caching and optimizations
+resource "cloudflare_page_rule" "landing" {
+  zone_id = var.CODER_ZONE_ID
+  target = "https://coderkata.dev"
   priority = 1
 
   actions {

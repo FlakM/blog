@@ -1,4 +1,4 @@
-{ system, lib, pkgs, modulesPath, backend, static, ... }: {
+{ system, lib, pkgs, modulesPath, backend, static, landing, ... }: {
   imports = [
     # Adds availableKernelModules, kernelModules for instances running under QEMU (Ie Hetzner Cloud)
     (modulesPath + "/profiles/qemu-guest.nix")
@@ -6,6 +6,8 @@
     ./disk-config.nix
     backend.nixosModules.x86_64-linux.default
     static.nixosModules.x86_64-linux.default
+    landing.nixosModules.x86_64-linux.landing
+    landing.nixosModules.x86_64-linux.backend_kata
   ];
 
   # enable experimental features flakes and nix-command
@@ -13,6 +15,14 @@
     extraOptions = ''
       experimental-features = nix-command flakes
     '';
+  };
+
+
+
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "--delete-older-than 10d";
   };
 
 
@@ -50,8 +60,48 @@
       domain = "blog.flakm.com";
     };
 
+    landing = {
+      enable = true;
+      domain = "landing.coderkata.dev";
+    };
+
+
+    backend_kata = {
+      enable = true;
+      domain = "coderkata.dev";
+    };
+
+
     nginx = {
       enable = true;
+      appendHttpConfig = ''
+        log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for" "$host"';
+        access_log /var/log/nginx/access.log main;
+        error_log /var/log/nginx/error.log;
+      '';
+
+      virtualHosts."landing.coderkata.dev" = {
+        forceSSL = true;
+        enableACME = true;
+      };
+
+      virtualHosts."coderkata.dev" = {
+        forceSSL = true;
+        enableACME = true;
+        locations."/" = {
+          root = "${landing.packages.x86_64-linux.default}";
+          tryFiles = "$uri $uri/ =404";
+          extraConfig = ''
+            add_header Cache-Control "public, max-age=3600";
+          '';
+          priority = 20; # set a high priority to make it the last location
+        };
+      };
+
+
+
       virtualHosts."blog.flakm.com" = {
         forceSSL = true;
         enableACME = true;
@@ -87,6 +137,8 @@
     certs = {
       "blog.flakm.com".email = "me@flakm.com";
       "fedi.flakm.com".email = "me@flakm.com";
+      "landing.coderkata.dev".email = "me@flakm.com";
+      "coderkata.dev".email = "me@flakm.com";
     };
   };
 
