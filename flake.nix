@@ -70,12 +70,17 @@
       devShell.${system} = pkgs.mkShell {
         DATABASE_PATH = "./db.sqlite";
         DATABASE_URL = "sqlite://./db.sqlite";
+        FONT="${pkgs.nerdfonts}";
 
         buildInputs = with pkgs; [
           opentofu # provisioning tool for the OpenTofu project
           ponysay # just for fun run `ponysay hello`
           hugo
           sqlx-cli
+          python312
+          python312Packages.cairosvg
+          python312Packages.pillow
+          python312Packages.svgwrite
         ];
       };
     };
