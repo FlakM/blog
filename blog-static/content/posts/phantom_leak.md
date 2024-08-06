@@ -1,5 +1,5 @@
 --- 
-title: "Phantom Menance: memory leak that wasn't there"
+title: "Phantom Menace: memory leak that wasn't there"
 date: 2024-08-05T06:38:59+02:00
 authors: ["Maciej Flak"]
 draft: false
@@ -30,7 +30,7 @@ The migration went smoothly - we had a few hiccups, but nothing major. And then 
 I received a message from our devops team that the application was scaling like crazy - we had a memory leak!
 
 
-A memory leak in rust? That's impossible! Rust is a safe language; it can't have memory leaks!
+A memory leak in rust? That's impossible! Rust is a safe language; it can't have memory leaks! [^1]
 
 But since we are using `imagemagick`, we are using FFI - and that's where the problem must be.
 To make things worse, the application was using `jemalloc`, but imagemagick started using system allocator a long time ago.
@@ -254,6 +254,9 @@ pod-name                       327m         10194Mi
 So the `container_memory_working_set_bytes` is not the memory usage of the container without cache but the memory usage of the container with cache but without the inactive file cache.
 There is no leak in the application - the metrics dashboard was lying to us!
 
+In our case, high `active_file` values (cache usage) are not a problem - it's a feature since we rely on the filesystem cache to avoid duplicating the image processing.
+Monitoring `container_memory_working_set_bytes` still makes sense since it is the metric that kublet uses to kill the pod when it exceeds the limits.
+However, after getting a better grasp of the matters, we decided to add additional alerts for residents with a set size of the application to catch potential bugs in the future.
 
 ## Conclusion
 
@@ -275,3 +278,10 @@ Here are my takeaways:
 5. When you hear hoofbeats, think of horses, not zebras. More often then not, the problem is not in the FFI code, which has worked for years.
 5. Try to understand how the metrics are calculated - computers are complex, and over simplification has led me to the wrong conclusion.
 6. Don’t give up - the problem is there; you must find it.
+
+
+[^1]: It's a **bad joke**, I'm sorry. It's been pointed out to me that I should be more explicit about it.
+      And [u/memoryruins](https://www.reddit.com/r/rust/comments/1ekklj0/comment/lgl93io/) kindly pointed out that
+      memory leaks are possible in rust - even in safe rust by using [`mem::forget`](https://doc.rust-lang.org/1.80.0/std/mem/fn.forget.html#safety). Additionally, types like `String`, `Box`, `Rc` have [ways](https://doc.rust-lang.org/std/boxed/struct.Box.html?search=leak) to leak memory.
+      
+      Nomicon *"The Dark Arts of Unsafe Rust"* has an amazing resource, [Leaking](https://doc.rust-lang.org/nomicon/leaking.html), on how and why we can get even more leaks.
