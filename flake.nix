@@ -17,11 +17,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    landing = {
-      url = "git+ssh://git@github.com/FlakM/coder_kata";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
   };
 
   outputs = { nixpkgs, disko, backend, static, ... }@attrs:
