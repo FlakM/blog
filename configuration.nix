@@ -59,6 +59,11 @@
     };
 
 
+    backend_kata = {
+      enable = true;
+      domain = "coderkata.dev";
+    };
+
     nginx = {
       enable = true;
       appendHttpConfig = ''
@@ -106,6 +111,13 @@
     certs = {
       "blog.flakm.com".email = "me@flakm.com";
       "fedi.flakm.com".email = "me@flakm.com";
+<<<<<<< HEAD
+||||||| parent of db9a49a (chore: remove landing page)
+      "landing.coderkata.dev".email = "me@flakm.com";
+      "coderkata.dev".email = "me@flakm.com";
+=======
+      "coderkata.dev".email = "me@flakm.com";
+>>>>>>> db9a49a (chore: remove landing page)
     };
   };
 
