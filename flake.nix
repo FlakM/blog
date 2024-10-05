@@ -17,11 +17,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    landing = {
-      url = "git+ssh://git@github.com/FlakM/coder_kata";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
   };
 
   outputs = { nixpkgs, disko, backend, static, ... }@attrs:
@@ -70,7 +65,7 @@
       devShell.${system} = pkgs.mkShell {
         DATABASE_PATH = "./db.sqlite";
         DATABASE_URL = "sqlite://./db.sqlite";
-        FONT="${pkgs.nerdfonts}";
+        FONT = "${pkgs.nerdfonts}";
 
         buildInputs = with pkgs; [
           opentofu # provisioning tool for the OpenTofu project

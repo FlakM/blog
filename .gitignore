@@ -39,3 +39,5 @@ id_rsa.pem
 backend_old/
 
 backend/db.sqlite*
+
+node_modules/
