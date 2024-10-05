@@ -31,12 +31,16 @@ style = "rrt"
   weight = 1
   url  = "posts/"
 [[menu.main]]
-  name = "Series"
+  name = "Hire me!"
   weight = 2
+  url  = "hire_me/"
+[[menu.main]]
+  name = "Series"
+  weight = 3
   url  = "series/"
 [[menu.main]]
   name = "About"
-  weight = 3
+  weight = 4
   url = "about/"
 
 
@@ -54,9 +58,7 @@ style = "rrt"
   colorScheme = "auto"
   hidecolorschemetoggle = false
   # Custom CSS and JS. Relative to /static/css and /static/js respectively.
-  custom_css = [
-    "css/main.css"
-  ]
+  customCSS = [ "css/custom.css" ]
 
   
 
