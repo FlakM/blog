@@ -9,10 +9,10 @@
       pkgs = nixpkgs.legacyPackages.${system};
       fhs = pkgs.buildFHSUserEnv {
         name = "fhs-shell";
-        targetPkgs = pkgs: [pkgs.linuxHeaders] ;
+        targetPkgs = pkgs: [ pkgs.linuxHeaders ];
       };
     in
-      {
-        devShells.${system}.default = fhs.env;
-      };
+    {
+      devShells.${system}.default = fhs.env;
+    };
 }

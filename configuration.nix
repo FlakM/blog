@@ -59,12 +59,6 @@
     };
 
 
-    backend_kata = {
-      enable = true;
-      domain = "coderkata.dev";
-    };
-
-
     nginx = {
       enable = true;
       appendHttpConfig = ''
@@ -112,7 +106,6 @@
     certs = {
       "blog.flakm.com".email = "me@flakm.com";
       "fedi.flakm.com".email = "me@flakm.com";
-      "coderkata.dev".email = "me@flakm.com";
     };
   };
 
