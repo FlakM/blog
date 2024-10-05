@@ -1,0 +1,90 @@
+/* put conde here */
+
+.bg-top {
+    background-position: center;
+}
+
+
+@media only screen and (min-width: 1000px) {
+.mw8 {
+  max-width: 50vw;
+}
+
+
+.img-lg {
+  width: 70vw;
+  position: relative;
+  left: 10%;
+  right: 10%;
+  margin-left: -15vw;
+  margin-right: -15vw; 
+}
+
+pre {
+    margin-top: 2em;
+    margin-bottom: 2em;
+}
+
+
+.img-lg {
+    margin-top: 2em;
+    margin-bottom: 2em;
+}
+
+aside {
+    visibility: hidden;
+}
+
+.w-two-thirds-l {
+  width: 100%;
+}
+
+.my-table table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  
+.my-table th, td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+  }
+
+  
+.my-table tr:hover {background-color: rgba(243, 235, 235, 0.911);}
+
+
+.danger {
+  background-color: #ffdddd;
+  border-left: 6px solid #f44336;
+}
+
+
+.job-banner {
+    background-color: #ffeb3b; /* Bright yellow background for attention */
+    color: #333; /* Dark text for contrast */
+    text-align: center; /* Center the text */
+    padding: 20px; /* Space around the text */
+    font-family: 'Arial', sans-serif;
+    font-size: 18px;
+    border: 2px solid #ffc107; /* Slightly darker yellow border */
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+    position: relative;
+    margin-bottom: 20px; /* Space below the banner */
+}
+
+.job-banner p {
+    margin: 0;
+    padding: 0;
+}
+
+.job-banner a {
+    color: #007bff; /* Link color */
+    text-decoration: none; /* Remove underline */
+    font-weight: bold;
+}
+
+.job-banner a:hover {
+    text-decoration: underline; /* Underline on hover */
+}
