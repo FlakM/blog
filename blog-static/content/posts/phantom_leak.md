@@ -17,6 +17,7 @@ Everything seemed fine until a suspected memory leak caused our application to s
 The real twist came when I discovered that the memory leak was a phantom menace - a misinterpretation of Kubernetes memory metrics rather than a genuine issue. 
 This post details the steps I took, the tools I used, and the lessons I learned about problem-solving, metric accuracy, and effective debugging in containerized environments.
 '
+
 ---
 
 I'm always scared of the bug that will finally break me - lose my sanity once and for all.
