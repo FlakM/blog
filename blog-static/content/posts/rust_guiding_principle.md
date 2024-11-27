@@ -1,7 +1,17 @@
 --- 
-title: "Rust’s guiding principle"
+title: "Aligning with rust's Guiding Principle: my path to finding my 'Why'"
 date: 2024-11-26T21:58:34+01:00
-draft: true
+draft: false
+tags: ["rust", "learning", "community"]
+authors: ["Maciej Flak"]
+
+description: "How does a programming language inspire purpose? In this post, I share my journey of discovering rust's guiding principle—'empowering everyone to build reliable and efficient software'—and how it helped me uncover my own 'why.' From my unconventional start in technology to finding tools that align with my values, this story explores the profound connection between rust's philosophy and my growth as a developer. Along the way, I also highlight some of the best resources that make Rust accessible and empowering for everyone."
+
+images: [
+    "/images/start-with-why.jpg"
+    ]
+featured_image: "/images/start-with-why.jpg"
+
 ---
 
 ## Rust's guiding principle
@@ -21,7 +31,7 @@ If we look at the rust's website, the guiding principle is clear.
 
 > A language empowering everyone to build reliable and efficient software
 
-It has occurred to me that that's the reason why rust might have resonated with me so much. It's not just a language, it's a guiding principle that aligns with mine. It helped me find my guiding principle.
+It has occurred to me that that's the reason why rust might have resonated with me so much. The community is aligned with the same 'Why'! It helped me find my guiding principle.
 
 > Leverage my passion for learning and technology to create reliable, efficient, high-quality solutions on time.
 
@@ -41,7 +51,7 @@ I recall reaching for The Book - rust's documentation about the language to chec
 
 The book clearly aims to intertwine the language's syntax with broader conceptual explanations in every chapter, starting from the very beginning
 
-I was taught programming in 2015 using java and python, I never had to think about the the memory layout of the program. The hardware cost was already so low that it didn't matter if the program was inefficient. And there was always silent but uninspiring acceptance of the fact that the software, by definition, must be buggy.
+I was taught programming in 2015 using java and python, I never had to think about the memory layout of the program. The hardware cost was already so low that it didn't matter if the program was inefficient. And there was always silent but uninspiring acceptance of the fact that the software, by definition, must be buggy.
 
 At least in my experience with non-tech first companies, the industry's fast software delivery pace has made it easy to ignore the underlying concepts. Learning about those deeper, hidden layers never made sense because the language abstracted them away.
 
@@ -81,7 +91,7 @@ A [book](https://zero2prod.com/) by [Luca Palmieri](https://www.lpalmieri.com/) 
 It's an excellent resource for learning how to build a real-world application in rust if you prefer a more hands-on approach.
 
 
-### Blogs
+### 🌐 Blogs
 
 #### This Week in Rust
 
@@ -152,9 +162,8 @@ I've especially enjoyed his series of interviews with the creators as he focuses
 ## Conclusion and a thank you
 
 It's evident that the rust community is aligned with the guiding principle of the language.
-I want to thank the rust community for making it easy to learn the language and for providing such a great resource from which to learn.
-You have empowered me to write reliable and efficient software in rust.
 
+I want to thank the rust community for making it easy to learn the language and for providing such a great resource from which to learn. You have empowered me to write reliable and efficient software in rust.
 
-PS: I'm sorry if I've missed some great resources. Please let me know, and I'll add them to the list or fire a MR to the [repo](https://github.com/FlakM/blog/tree/master/blog-static/content)
+PS: I'm sorry if I've missed some great resources. Please let me know, and I'll add them to the list or fire a MR to the [blog post](https://github.com/FlakM/blog/edit/master/blog-static/content/posts/rust_guiding_principle.md)
 
