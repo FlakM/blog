@@ -7,9 +7,10 @@ copyright = "Copyright © 2023, Maciej Flak; all rights reserved."
 title = "FlakM blog"
 theme = "hugo-coder"
 
-paginate = 20
 enableEmoji = true
 
+[pagination]
+    pagerSize = 20
 
 [markup.highlight]
 style = "rrt"

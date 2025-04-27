@@ -65,7 +65,6 @@
       devShell.${system} = pkgs.mkShell {
         DATABASE_PATH = "./db.sqlite";
         DATABASE_URL = "sqlite://./db.sqlite";
-        FONT = "${pkgs.nerdfonts}";
 
         buildInputs = with pkgs; [
           opentofu # provisioning tool for the OpenTofu project
