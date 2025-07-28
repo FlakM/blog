@@ -17,7 +17,9 @@ use axum::{
 use error::Error;
 use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::SqlitePool;
+use std::fs;
 use std::net::ToSocketAddrs;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::extract::MatchedPath;
@@ -52,8 +54,14 @@ async fn main() -> Result<(), Error> {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
-
+    
     let database_path = std::env::var("DATABASE_PATH").unwrap_or_else(|_| "./db.sqlite".into());
+    let db_path: PathBuf = database_path.clone().into();
+
+    // 2) make sure its parent directory exists
+    if let Some(parent) = db_path.parent() {
+        fs::create_dir_all(parent).map_err(|e| Error::from(e))?;
+    }
 
     let options = SqliteConnectOptions::new()
         .filename(database_path)

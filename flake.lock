@@ -26,15 +26,14 @@
         ]
       },
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-OvrtjVLxP5G8pTSu0Bzcssri3eWuE0jyEe/qVppb6b4=",
-        "path": "/nix/store/n0yj6cmp0p32zdxzlh1nckc9wfdgcsp0-source/backend",
+        "path": "./backend",
         "type": "path"
       },
       "original": {
-        "path": "/nix/store/n0yj6cmp0p32zdxzlh1nckc9wfdgcsp0-source/backend",
+        "path": "./backend",
         "type": "path"
-      }
+      },
+      "parent": []
     },
     "crane": {
       "inputs": {
@@ -146,15 +145,14 @@
         "theme": "theme"
       },
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-F2KAUnTfoHAXuh3cnEOPiGIxLfpn7YR0C2GQMPhwlGc=",
-        "path": "/nix/store/n0yj6cmp0p32zdxzlh1nckc9wfdgcsp0-source/blog-static",
+        "path": "./blog-static",
         "type": "path"
       },
       "original": {
-        "path": "/nix/store/n0yj6cmp0p32zdxzlh1nckc9wfdgcsp0-source/blog-static",
+        "path": "./blog-static",
         "type": "path"
-      }
+      },
+      "parent": []
     },
     "systems": {
       "locked": {

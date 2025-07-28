@@ -46,6 +46,7 @@
     allowedTCPPorts = [ 80 443 ];
   };
 
+
   services = {
     backend = {
       enable = true;
@@ -74,11 +75,15 @@
         forceSSL = true;
         enableACME = true;
       };
+      virtualHosts."tata.flakm.com" = {
+        forceSSL = true;
+        enableACME = true;
+        root = "/var/www/tata";
+      };
       virtualHosts."fedi.flakm.com" = {
         forceSSL = true;
         enableACME = true;
       };
-
       commonHttpConfig =
         let
           realIpsFromList = lib.strings.concatMapStringsSep "\n" (x: "set_real_ip_from  ${x};");
@@ -105,6 +110,7 @@
     certs = {
       "blog.flakm.com".email = "me@flakm.com";
       "fedi.flakm.com".email = "me@flakm.com";
+      "tata.flakm.com".email = "me@flakm.com";
     };
   };
 

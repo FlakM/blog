@@ -24,13 +24,18 @@ in
         enableACME = true;
         locations."/" = {
           proxyPass = "http://127.0.0.1:8000";
+          proxyWebsockets = true;
 
           recommendedProxySettings = true;
+          extraConfig = ''
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+          '';
         };
-        # include X-Forwarded-Ip header in proxied requests using realip module
-        # https://nginx.org/en/docs/http/ngx_http_realip_module.html
       };
     };
+
+
   };
 
   security.acme = {
@@ -38,5 +43,4 @@ in
       ${domain}.email = "me@flakm.com";
     };
   };
-
 }

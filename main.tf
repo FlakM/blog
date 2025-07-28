@@ -78,7 +78,7 @@ resource "hcloud_server" "blog" {
   location    = "fsn1"
   ssh_keys    = [hcloud_ssh_key.yubi.id]  # SSH keys associated with the server
   # Associate the firewall
-  firewall_ids = [hcloud_firewall.web_firewall.id]
+  #firewall_ids = [hcloud_firewall.web_firewall.id]
 }
 
 # Output the public IP address of the Hetzner Cloud Server
@@ -90,11 +90,6 @@ output "public_ip" {
 variable "ZONE_ID" {
   # Environment variable for Cloudflare Zone ID
   # export TF_VAR_ZONE_ID="..."
-}
-
-variable "CODER_ZONE_ID" {
-  # Environment variable for Cloudflare Zone ID
-  # export TF_VAR_CODER_ZONE_ID="..."
 }
 
 # Cloudflare DNS A record configuration for the blog
@@ -110,14 +105,14 @@ resource "cloudflare_record" "blog_nginx" {
   proxied = false  # Direct DNS, no Cloudflare proxy
 }
 
-
-resource "cloudflare_record" "landing_nginx" {
-  zone_id = var.CODER_ZONE_ID
-  name    = "landing.coderkata.dev"
+resource "cloudflare_record" "tata_nginx" {
+  zone_id = var.ZONE_ID
+  name    = "tata.flakm.com"
   value   = hcloud_server.blog.ipv4_address
   type    = "A"
   proxied = false  # Direct DNS, no Cloudflare proxy
 }
+
 
 # Cloudflare DNS A record configuration for the plausible analytics
 resource "cloudflare_record" "plausible_nginx" {
@@ -140,20 +135,22 @@ resource "cloudflare_record" "fedi_nginx" {
 resource "cloudflare_record" "blog" {
   zone_id = var.ZONE_ID
   name    = "@"
-  value   = "blog.flakm.com"
+  value   = "blog"
   type    = "CNAME"
   proxied = true  # Enable Cloudflare proxy
 }
 
 
 # Cloudflare DNS CNAME record for the blog behind Cloudflare proxy
-resource "cloudflare_record" "landing" {
-  zone_id = var.CODER_ZONE_ID
+resource "cloudflare_record" "tata" {
+  zone_id = var.ZONE_ID
   name    = "@"
-  value   = "landing.coderkata.dev"
+  value   = "tata.flakm.com"
   type    = "CNAME"
   proxied = true  # Enable Cloudflare proxy
+  allow_overwrite = true
 }
+
 
 # Configure settings for the flakm.com domain in Cloudflare
 resource "cloudflare_zone_settings_override" "flakm-com-settings" {
@@ -163,17 +160,6 @@ resource "cloudflare_zone_settings_override" "flakm-com-settings" {
     tls_1_3                  = "on"
     automatic_https_rewrites = "on"
     ssl                      = "strict"
-    cache_level              = "aggressive"
-  }
-}
-
-resource "cloudflare_zone_settings_override" "coderkata-dev-settings" {
-  zone_id = var.CODER_ZONE_ID
-
-  settings {
-    tls_1_3                  = "on"
-    automatic_https_rewrites = "on"
-    ssl                      = "full" # strict doesn't work for some reason...
     cache_level              = "aggressive"
   }
 }
@@ -190,16 +176,6 @@ resource "cloudflare_page_rule" "blog" {
   }
 }
 
-# Cloudflare page rule for caching and optimizations
-resource "cloudflare_page_rule" "landing" {
-  zone_id = var.CODER_ZONE_ID
-  target = "https://coderkata.dev"
-  priority = 1
-
-  actions {
-    cache_level = "cache_everything"  # Cache HTML and other assets
-  }
-}
 
 # NixOS system build module from Nixos anywhere
 module "system-build" {
@@ -219,4 +195,23 @@ module "install" {
   nixos_system      = module.system-build.result.out
   nixos_partitioner = module.disko.result.out
   target_host       = hcloud_server.blog.ipv4_address
+}
+
+resource "cloudflare_record" "flakm_root" {
+  zone_id         = var.ZONE_ID
+  name            = "@"
+  value           = "blog.flakm.com"
+  type            = "CNAME"
+  proxied         = true  # Enable Cloudflare proxy for caching
+  allow_overwrite = true
+}
+
+resource "cloudflare_page_rule" "flakm_root" {
+  zone_id  = var.ZONE_ID
+  target   = "https://flakm.com/*"
+  priority = 1
+
+  actions {
+    cache_level = "cache_everything"  # Cache HTML and other assets
+  }
 }
