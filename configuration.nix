@@ -43,20 +43,147 @@
 
   networking.firewall = {
     enable = true;
-    allowedTCPPorts = [ 80 443 ];
+    allowedTCPPorts = [ 80 443 4317 4318 ]; # Added OTLP ports
   };
 
 
   services = {
     backend = {
       enable = true;
-      domain = "fedi.flakm.com";
+      domain = "blog.flakm.com";
       posts_path = "${static.packages.x86_64-linux.default}/bloglist.json";
     };
 
     static-website = {
       enable = true;
       domain = "blog.flakm.com";
+    };
+
+    postgresql = {
+      enable = true;
+      package = pkgs.postgresql_15;
+
+      ensureDatabases = [ "blog" ];
+      ensureUsers = [
+        {
+          name = "blog";
+          ensureDBOwnership = true;
+        }
+      ];
+
+      # Set a password for the blog user (this should be changed in production)
+      initialScript = pkgs.writeText "backend-initScript" ''
+        CREATE USER IF NOT EXISTS blog WITH PASSWORD 'blog';
+        ALTER USER blog CREATEDB;
+        GRANT ALL PRIVILEGES ON DATABASE blog TO blog;
+      '';
+
+      authentication = pkgs.lib.mkOverride 10 ''
+        # Allow local connections from the blog user
+        local   blog        blog                    trust
+        host    blog        blog    127.0.0.1/32    trust
+        host    blog        blog    ::1/128         trust
+        # Default entries
+        local   all         all                     trust
+        host    all         all     127.0.0.1/32    ident
+        host    all         all     ::1/128         ident
+      '';
+    };
+
+    # OpenTelemetry Collector for observability
+    opentelemetry-collector = {
+      enable = true;
+      package = pkgs.opentelemetry-collector-contrib;
+
+      settings = {
+        receivers = {
+          otlp = {
+            protocols = {
+              grpc = {
+                endpoint = "0.0.0.0:4317";
+              };
+              http = {
+                endpoint = "0.0.0.0:4318";
+              };
+            };
+          };
+          prometheus = {
+            config = {
+              scrape_configs = [
+                {
+                  job_name = "backend-metrics";
+                  static_configs = [
+                    {
+                      targets = [ "localhost:3000" ];
+                    }
+                  ];
+                  scrape_interval = "15s";
+                  metrics_path = "/metrics";
+                }
+              ];
+            };
+          };
+        };
+
+        processors = {
+          batch = { };
+          resource = {
+            attributes = [
+              {
+                key = "service.name";
+                value = "blog-backend";
+                action = "upsert";
+              }
+              {
+                key = "deployment.environment";
+                value = "production";
+                action = "upsert";
+              }
+            ];
+          };
+        };
+
+        exporters = {
+          # For debugging - logs to systemd journal
+          logging = {
+            loglevel = "debug";
+          };
+          # Coralogix OTLP exporter
+          coralogix = {
+            domain = "coralogix.com";
+            private_key = builtins.readFile "/var/secrets/coralogix_key";
+            application_name = "blog-system";
+            subsystem_name = "backend";
+          };
+          # Generic OTLP HTTP exporter as fallback
+          otlphttp = {
+            endpoint = "https://otlp.coralogix.com:443/v1/traces";
+            headers = {
+              "Authorization" = "Bearer ${builtins.readFile "/var/secrets/coralogix_key"}";
+            };
+          };
+        };
+
+        service = {
+          pipelines = {
+            traces = {
+              receivers = [ "otlp" ];
+              processors = [ "resource" "batch" ];
+              exporters = [ "logging" "coralogix" ];
+            };
+            metrics = {
+              receivers = [ "otlp" "prometheus" ];
+              processors = [ "resource" "batch" ];
+              exporters = [ "logging" "coralogix" ];
+            };
+            logs = {
+              receivers = [ "otlp" ];
+              processors = [ "resource" "batch" ];
+              exporters = [ "logging" "coralogix" ];
+            };
+          };
+        };
+      };
     };
 
     nginx = {
@@ -124,6 +251,7 @@
     curl
     jq
     sqlite
+    postgresql_15
     ponysay
   ];
 

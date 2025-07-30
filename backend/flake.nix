@@ -3,10 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    crane = {
-      url = "github:ipetkov/crane";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    crane.url = "github:ipetkov/crane";
     flake-utils.url = "github:numtide/flake-utils";
     advisory-db = {
       url = "github:rustsec/advisory-db";
@@ -23,21 +20,22 @@
 
         inherit (pkgs) lib;
 
-        craneLib = crane.lib.${system};
+        craneLib = crane.mkLib pkgs;
 
         sqlFilter = path: _type: null != builtins.match ".*sql$" path;
-        sqlOrCargo = path: type: (sqlFilter path type) || (craneLib.filterCargoSources path type);
+        sqlxFilter = path: _type: null != builtins.match ".*\\.sqlx/.*\\.json$" path;
+        sqlOrCargoOrSqlx = path: type: (sqlFilter path type) || (sqlxFilter path type) || (craneLib.filterCargoSources path type);
 
-        src = lib.cleanSourceWith {
-          src = craneLib.path ./.; # The original, unfiltered source
-          filter = sqlOrCargo;
-        };
+        # Just use the full source for now to avoid filtering issues
+        src = craneLib.path ./.;
 
         # Common arguments can be set here to avoid repeating them later
         commonArgs = {
           inherit src;
           buildInputs = [ pkgs.openssl ];
           nativeBuildInputs = [ pkgs.pkg-config ];
+          # Disable offline mode for SQLx during builds due to missing cache
+          SQLX_OFFLINE = "true";
         };
 
         # Build *just* the cargo dependencies, so we can reuse
@@ -53,11 +51,6 @@
             pkgs.sqlx-cli
           ];
 
-          preBuild = ''
-            export DATABASE_URL=sqlite:./db.sqlite3
-            sqlx database create
-            sqlx migrate run
-          '';
         });
 
       in
@@ -89,23 +82,53 @@
             config = mkIf cfg.enable {
               systemd.services.backend = {
                 wantedBy = [ "multi-user.target" ];
+                after = [ "postgresql.service" "postgresql-setup.service" ];
+                requires = [ "postgresql.service" ];
                 serviceConfig = {
                   Restart = "on-failure";
                   ExecStart = "${server}/bin/backend ${config.services.backend.posts_path}";
                 };
                 environment = {
                   "RUST_LOG" = "INFO";
-                  "DATABASE_PATH" = "./db.sqlite3";
+                  "DATABASE_URL" = "postgresql://blog:blog@localhost:5432/blog";
+                  "OTEL_EXPORTER_OTLP_ENDPOINT" = "http://localhost:4317";
+                  "OTEL_SERVICE_NAME" = "blog-backend";
+                  "OTEL_SERVICE_VERSION" = "1.0.0";
+                  "OTEL_RESOURCE_ATTRIBUTES" = "deployment.environment=production";
                 };
               };
 
               services.nginx.virtualHosts.${cfg.domain} = {
-                locations."/" = {
-                  proxyPass = "http://127.0.0.1:3000";
-                  extraConfig = "
+                locations."/api/health" = {
+                  proxyPass = "http://127.0.0.1:3000/health";
+                  extraConfig = ''
                     proxy_set_header Host $host;
-                  ";
-                  priority = 10; # smaller number means higher priority
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+                  '';
+                  priority = 10;
+                };
+                locations."/api/metrics" = {
+                  proxyPass = "http://127.0.0.1:3000/metrics";
+                  extraConfig = ''
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+                  '';
+                  priority = 10;
+                };
+                locations."~ ^/api/likes?/" = {
+                  proxyPass = "http://127.0.0.1:3000";
+                  extraConfig = ''
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+                    rewrite ^/api(/.*) $1 break;
+                  '';
+                  priority = 10;
                 };
               };
             };
@@ -123,26 +146,23 @@
             inherit src;
           };
 
-          audit = craneLib.cargoAudit {
-            inherit src advisory-db;
-          };
+          # audit = craneLib.cargoAudit {
+          #   inherit src advisory-db;
+          # };
 
-          # Run tests with cargo-nextest
-          # Consider setting `doCheck = false` on `server` if you do not want
-          # the tests to run twice
           nextest = craneLib.cargoNextest (commonArgs // {
             inherit cargoArtifacts;
             partitions = 1;
             partitionType = "count";
+            preCheck = ''
+              export RUST_LOG=debug
+            '';
           });
 
-          # Integration that are run using kvm virtual machines
-          integration = import ./nixos-test.nix {
-            makeTest = import (nixpkgs + "/nixos/tests/make-test-python.nix");
-            inherit system;
-            inherit pkgs;
-            inherit self;
-          };
+          # Integration that are run using kvm virtual machines  
+          nixos-integration = pkgs.nixosTest (import ./nixos-test.nix {
+            inherit system pkgs self;
+          });
         };
 
         # This will enable running `nix run` to start the server

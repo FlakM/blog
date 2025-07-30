@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO blog_post_likes (post_slug, user_ip, user_agent, cf_country, cf_connecting_ip, liked_at, hour_bucket)\n        VALUES ($1, $2, $3, $4, $5, NOW(), $6)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Inet",
+        "Text",
+        "Varchar",
+        "Inet",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "95e47f6380552b9a55953a1b9490370b51acf68d59d4d1fbdaa7b1c042144805"
+}

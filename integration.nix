@@ -1,5 +1,5 @@
 { pkgs
-, makeTest
+, system
 , backend
 , static
 }:
@@ -9,8 +9,22 @@ let
     # Since it's common for CI not to have $DISPLAY available, we have to explicitly tell the tests "please don't expect any screen available"
     virtualisation.graphics = false;
   };
+
+  # Test blog posts JSON data
+  testBlogPosts = pkgs.writeText "test-posts.json" ''
+    [
+      {
+        "title": "Test Blog Post",
+        "slug": "test-post",  
+        "description": "A test blog post for integration testing",
+        "date": "2024-01-01T12:00:00Z",
+        "featuredImage": null,
+        "tags": ["test", "integration"],
+        "url": "http://server/posts/test-post"
+      }
+    ]
+  '';
 in
-makeTest
 {
   name = "integration";
 
@@ -29,14 +43,38 @@ makeTest
       services = {
         backend = {
           enable = true;
-          domain = "blog.flakm.com";
+          domain = "server";
+          posts_path = "${testBlogPosts}";
         };
 
         static-website = {
           enable = true;
-          domain = "blog.flakm.com";
+          domain = "server";
         };
         nginx.enable = true;
+
+        # Configure PostgreSQL (required by backend)
+        postgresql = {
+          enable = true;
+          package = pkgs.postgresql_15;
+          
+          ensureDatabases = [ "blog" ];
+          ensureUsers = [
+            {
+              name = "blog";
+              ensureDBOwnership = true;
+            }
+          ];
+          
+          authentication = pkgs.lib.mkOverride 10 ''
+            local   blog        blog                    trust
+            host    blog        blog    127.0.0.1/32    trust
+            host    blog        blog    ::1/128         trust
+            local   all         all                     trust
+            host    all         all     127.0.0.1/32    ident
+            host    all         all     ::1/128         ident
+          '';
+        };
       };
 
     };
@@ -56,18 +94,14 @@ makeTest
     server.wait_for_open_port(${toString test_port})
     server.wait_for_open_port(3000)
 
-    expected = "<h1>Hello, World!</h1>"
+    expected = "OK"
 
     actual = client.succeed(
-            "${pkgs.curl}/bin/curl -vv http://server/api"
+            "${pkgs.curl}/bin/curl -vv http://server/api/health"
     )
 
     if expected != actual:
         cprint("Test failed unexpected result: " + actual, "red", attrs=["bold"], file=sys.stderr)
         sys.exit(1)
   '';
-}
-{
-  inherit pkgs;
-  inherit (pkgs) system;
 }

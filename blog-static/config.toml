@@ -97,3 +97,7 @@ home = ["HTML", "RSS", "BlogListJSON"]
 [params.plausibleAnalytics]
   domain = "flakm.com"
   serverURL = "plausible.flakm.com"
+
+[params.likes]
+  enable = true
+  apiBase = "/api"

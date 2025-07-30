@@ -17,7 +17,7 @@
           version = "0.1.0";
           src = ./.;
           nativeBuildInputs = with pkgs; [ hugo git ];
-          buildPhase = "mkdir -p themes/hugo-coder/ && cp -r ${theme}/* themes/hugo-coder/ && ls -al themes && HUGO_ENV=production hugo --minify";
+          buildPhase = "mkdir -p themes/hugo-coder/ && cp -r ${theme}/* themes/hugo-coder/ && HUGO_ENV=production hugo --minify";
           installPhase = "cp -r public $out";
           submodules = [ theme ];
         };

@@ -1,0 +1,129 @@
+{{ if .Site.Params.likes.enable }}
+<div class="like-section" id="like-section-{{ .File.BaseFileName }}">
+  <div class="like-container">
+    <button 
+      class="like-button" 
+      id="like-btn-{{ .File.BaseFileName }}"
+      onclick="handleLike('{{ .File.BaseFileName }}')"
+      title="Like this post"
+    >
+      <i class="fa-solid fa-heart" id="heart-{{ .File.BaseFileName }}"></i>
+      <span class="like-text">Like</span>
+    </button>
+    <span class="like-count" id="like-count-{{ .File.BaseFileName }}">
+      <i class="fa-solid fa-spinner fa-spin" style="display: none;" id="spinner-{{ .File.BaseFileName }}"></i>
+      <span id="count-{{ .File.BaseFileName }}">0</span>
+    </span>
+  </div>
+  <div class="like-message" id="like-message-{{ .File.BaseFileName }}" style="display: none;"></div>
+</div>
+
+<script>
+// Global like functionality
+window.likeFunctionality = window.likeFunctionality || {};
+
+(function() {
+  const postSlug = '{{ .File.BaseFileName }}';
+  const apiBase = '{{ .Site.Params.likes.apiBase | default "/api" }}';
+  
+  // Load initial like count
+  async function loadLikeCount() {
+    const spinner = document.getElementById(`spinner-${postSlug}`);
+    const countElement = document.getElementById(`count-${postSlug}`);
+    
+    try {
+      spinner.style.display = 'inline-block';
+      const response = await fetch(`${apiBase}/likes/${postSlug}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        countElement.textContent = data.total_likes;
+      }
+    } catch (error) {
+      console.error('Failed to load like count:', error);
+      countElement.textContent = '0';
+    } finally {
+      spinner.style.display = 'none';
+    }
+  }
+  
+  // Handle like button click
+  window.handleLike = async function(slug) {
+    if (slug !== postSlug) return;
+    
+    const button = document.getElementById(`like-btn-${postSlug}`);
+    const heart = document.getElementById(`heart-${postSlug}`);
+    const countElement = document.getElementById(`count-${postSlug}`);
+    const messageElement = document.getElementById(`like-message-${postSlug}`);
+    const spinner = document.getElementById(`spinner-${postSlug}`);
+    
+    // Disable button during request
+    button.disabled = true;
+    heart.className = 'fa-solid fa-spinner fa-spin';
+    
+    try {
+      const response = await fetch(`${apiBase}/like/${postSlug}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update count
+        countElement.textContent = data.total_likes;
+        
+        // Show success animation
+        heart.className = 'fa-solid fa-heart liked';
+        button.classList.add('liked');
+        
+        // Show success message
+        messageElement.textContent = 'Thanks for liking this post! ❤️';
+        messageElement.style.display = 'block';
+        messageElement.className = 'like-message success';
+        
+        // Auto-hide message after 3 seconds
+        setTimeout(() => {
+          messageElement.style.display = 'none';
+        }, 3000);
+        
+      } else {
+        // Show error message
+        messageElement.textContent = data.message || 'Could not like this post';
+        messageElement.style.display = 'block';
+        messageElement.className = 'like-message error';
+        
+        // Auto-hide message after 5 seconds
+        setTimeout(() => {
+          messageElement.style.display = 'none';
+        }, 5000);
+      }
+    } catch (error) {
+      console.error('Failed to like post:', error);
+      messageElement.textContent = 'Network error - please try again';
+      messageElement.style.display = 'block';
+      messageElement.className = 'like-message error';
+      
+      setTimeout(() => {
+        messageElement.style.display = 'none';
+      }, 5000);
+    } finally {
+      // Re-enable button
+      button.disabled = false;
+      if (!button.classList.contains('liked')) {
+        heart.className = 'fa-solid fa-heart';
+      }
+    }
+  };
+  
+  // Load like count when page loads
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadLikeCount);
+  } else {
+    loadLikeCount();
+  }
+})();
+</script>
+{{ end }}

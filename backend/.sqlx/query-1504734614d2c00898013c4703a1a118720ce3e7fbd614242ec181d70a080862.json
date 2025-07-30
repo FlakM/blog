@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO blog_posts (title, slug, description, date, featured_image, tags, url) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT(slug) DO UPDATE SET title = excluded.title, description = excluded.description, date = excluded.date, featured_image = excluded.featured_image, tags = excluded.tags, url = excluded.url",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Text",
+        "Timestamptz",
+        "Varchar",
+        "Text",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1504734614d2c00898013c4703a1a118720ce3e7fbd614242ec181d70a080862"
+}
