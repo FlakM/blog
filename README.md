@@ -377,14 +377,22 @@ journalctl -u postgresql.service -f
 journalctl -u opentelemetry-collector.service -f
 ```
 
-## Contributing
+## Manage secrets
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run `nix flake check` to ensure all tests pass
-5. Submit a pull request
+Insert yubikey and run:
+
+```bash
+nix-shell -p sops --run "sops secrets/secrets.yaml"
+```
+
+The asc for the secrets was generated with:
+
+```bash
+ssh root@hetzner-blog  "sudo cat /etc/ssh/ssh_host_rsa_key" | nix-shell -p ssh-to-pgp --run "ssh-to-pgp -o server01.asc"
+gpg --import server01.asc
+```
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+

@@ -110,7 +110,7 @@
                   priority = 10;
                 };
                 locations."/api/metrics" = {
-                  proxyPass = "http://127.0.0.1:3000/metrics";
+                  proxyPass = "http://127.0.0.1:9090/metrics";
                   extraConfig = ''
                     proxy_set_header Host $host;
                     proxy_set_header X-Real-IP $remote_addr;
@@ -170,7 +170,23 @@
           default = server;
         };
 
-        devShell = with pkgs; mkShell { };
+        devShell = with pkgs; mkShell {
+          buildInputs = [
+            rustc
+            cargo
+            rustfmt
+            clippy
+            rust-analyzer
+            pkg-config
+            openssl
+            sqlx-cli
+          ];
+          
+          shellHook = ''
+            export SQLX_OFFLINE=true
+            export DATABASE_URL="postgresql://blog:blog@localhost:5432/blog"
+          '';
+        };
       });
 
 }

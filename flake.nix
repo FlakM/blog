@@ -6,6 +6,12 @@
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    
     # Add the backend flake as an input
     backend = {
       url = "./backend"; # Points to the flake in the backend directory
@@ -19,7 +25,7 @@
 
   };
 
-  outputs = { nixpkgs, disko, backend, static, ... }@attrs:
+  outputs = { nixpkgs, disko, sops-nix, backend, static, ... }@attrs:
     let
       # The system we are building for. It will not work on other systems.
       # One might use flake-utils to make it work on other systems.
@@ -33,6 +39,9 @@
         inherit pkgs system backend static;
       });
 
+      # Browser E2E tests using nixosTest framework
+      browser-e2e-test = import ./browser-e2e.nix { inherit pkgs backend static; };
+
       # Python with properly compiled packages
       pythonEnv = pkgs.python3.withPackages (ps: with ps; [
         playwright
@@ -41,8 +50,8 @@
         greenlet
       ]);
 
-      # Browser E2E tests
-      browser-e2e = pkgs.writeShellScriptBin "browser-e2e-test" ''
+      # Browser E2E test script
+      browser-e2e-script = pkgs.writeShellScriptBin "browser-e2e-test" ''
         set -e
         echo "Running browser E2E tests..."
         
@@ -72,31 +81,39 @@
         specialArgs = attrs;
         modules = [
           disko.nixosModules.disko # Include disko module
+          sops-nix.nixosModules.sops # Include sops module
           ./configuration.nix # Include custom configuration
           ./plausible.nix
         ];
       };
-
-      # Browser E2E tests using nixosTest framework
-      browser-e2e = import ./browser-e2e.nix { inherit pkgs backend static; };
 
       # Merge the checks from the backend flake into the root flake's checks
       checks.${system} = nixpkgs.lib.recursiveUpdate
         (backend.checks.${system} or { })
         {
           itg = integration;
-          browser-e2e = browser-e2e;
+          browser-e2e = browser-e2e-test;
         };
 
       # Development shell environment
       # It will include the packages specified in the buildInputs attribute
       # once the shell is entered using `nix develop` or direnv integration.
-      devShell.${system} = pkgs.mkShell {
+      devShells.${system}.default = pkgs.mkShell {
         DATABASE_URL = "postgresql://blog:blog@localhost:5432/blog";
         PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
         PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
+        SQLX_OFFLINE = "true";
 
         buildInputs = with pkgs; [
+          # Rust toolchain from backend
+          rustc
+          cargo
+          rustfmt
+          clippy
+          rust-analyzer
+          pkg-config
+          openssl
+          # Root project tools
           opentofu # provisioning tool for the OpenTofu project
           ponysay # just for fun run `ponysay hello`
           hugo
@@ -106,7 +123,7 @@
           python3Packages.pillow
           python3Packages.svgwrite
           # Browser E2E testing tools
-          browser-e2e
+          browser-e2e-script
           xvfb-run
           python3Packages.playwright
           python3Packages.greenlet

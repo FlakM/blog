@@ -29,6 +29,8 @@ metrics = "0.24.2"
 metrics-exporter-prometheus = "0.17.2"
 uuid = { version = "1.17.0", features = ["v4"] }
 ipnetwork = "0.21.1"
+sha2 = "0.10"
+hex = "0.4"
 
 # Web server dependencies (conservative update)
 axum = { version = "0.7.8", features = ["json","query","tracing","tokio"] }

@@ -74,7 +74,7 @@ resource "hcloud_firewall" "web_firewall" {
 resource "hcloud_server" "blog" {
   name        = "blog-instance"
   image       = "ubuntu-22.04"   # After provisioning, NixOS will be installed see @install
-  server_type = "cpx11"          # AMD 2 vCPU, 2 GB RAM, 40 GB NVMe SSD
+  server_type = "cx33"           # Intel ® / AMD 4vcpu, 8GB RAM, 80GB SSD
   location    = "fsn1"
   ssh_keys    = [hcloud_ssh_key.yubi.id]  # SSH keys associated with the server
   # Associate the firewall

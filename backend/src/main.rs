@@ -4,9 +4,7 @@ use sqlx::PgPool;
 use std::net::SocketAddr;
 
 use axum::{
-    http::StatusCode,
     middleware,
-    response::{IntoResponse, Response},
     routing::{get, post},
     Router,
 };
@@ -24,7 +22,8 @@ mod observability;
 #[instrument]
 async fn main() -> Result<(), Error> {
     // Initialize observability stack first (tracing, metrics, logging)
-    observability::init_observability().expect("Failed to initialize observability");
+    let prometheus_handle =
+        observability::init_observability().expect("Failed to initialize observability");
 
     let database_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgresql://blog:blog@localhost:5432/blog".to_string());
@@ -59,7 +58,6 @@ async fn main() -> Result<(), Error> {
         .route("/like/:post_slug", post(likes::like_post))
         .route("/likes/:post_slug", get(likes::get_likes))
         .route("/health", get(health_check))
-        .route("/metrics", get(metrics))
         .layer(middleware::from_fn(correlation::correlation_middleware))
         .layer(CorsLayer::permissive()) // Allow CORS for frontend
         .layer(
@@ -91,6 +89,11 @@ async fn main() -> Result<(), Error> {
         )
         .with_state(pool);
 
+    // Create separate metrics server without any tracing instrumentation
+    let metrics_app = prometheus_handle
+        .clone()
+        .map(|handle| Router::new().route("/metrics", get(move || async move { handle.render() })));
+
     // Start the web server
     let bind_address = std::env::var("BIND_ADDRESS").unwrap_or_else(|_| "0.0.0.0:3000".to_string());
     let addr: SocketAddr = bind_address.parse().expect("Invalid bind address");
@@ -101,7 +104,22 @@ async fn main() -> Result<(), Error> {
     let listener = tokio::net::TcpListener::bind(addr).await?;
     let server = axum::serve(listener, app).with_graceful_shutdown(shutdown_signal());
 
-    if let Err(e) = server.await {
+    // Start metrics server if available
+    let metrics_server = if let Some(metrics_app) = metrics_app {
+        let metrics_addr: SocketAddr = "127.0.0.1:9090".parse().expect("Invalid metrics address");
+        let metrics_listener = tokio::net::TcpListener::bind(metrics_addr).await?;
+        info!("Starting metrics server on {}", metrics_addr);
+        Some(axum::serve(metrics_listener, metrics_app).with_graceful_shutdown(shutdown_signal()))
+    } else {
+        None
+    };
+
+    // Run both servers concurrently
+    if let Some(metrics_server) = metrics_server {
+        if let Err(e) = tokio::try_join!(server, metrics_server) {
+            tracing::error!("Server error: {}", e);
+        }
+    } else if let Err(e) = server.await {
         tracing::error!("Server error: {}", e);
     }
 
@@ -114,32 +132,6 @@ async fn main() -> Result<(), Error> {
 #[instrument]
 async fn health_check() -> &'static str {
     "OK"
-}
-
-#[instrument]
-async fn metrics() -> Response {
-    match reqwest::get("http://127.0.0.1:9090/metrics").await {
-        Ok(response) => {
-            if response.status().is_success() {
-                match response.text().await {
-                    Ok(body) => (StatusCode::OK, body).into_response(),
-                    Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Failed to read metrics")
-                        .into_response(),
-                }
-            } else {
-                (
-                    StatusCode::SERVICE_UNAVAILABLE,
-                    "Metrics service unavailable",
-                )
-                    .into_response()
-            }
-        }
-        Err(_) => (
-            StatusCode::SERVICE_UNAVAILABLE,
-            "Metrics service unavailable",
-        )
-            .into_response(),
-    }
 }
 
 async fn shutdown_signal() {

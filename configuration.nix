@@ -8,6 +8,18 @@
     static.nixosModules.x86_64-linux.default
   ];
 
+  # Sops configuration for secrets management
+  sops = {
+    defaultSopsFile = ./secrets/secrets.yaml;
+    # Using GPG keys with SSH key paths
+    gnupg.sshKeyPaths = [ "/etc/ssh/ssh_host_rsa_key" ];
+    secrets = {
+      coralogix_send_data_key = {
+        mode = "0400";
+      };
+    };
+  };
+
   # enable experimental features flakes and nix-command
   nix = {
     extraOptions = ''
@@ -114,7 +126,7 @@
                   job_name = "backend-metrics";
                   static_configs = [
                     {
-                      targets = [ "localhost:3000" ];
+                      targets = [ "localhost:9090" ];
                     }
                   ];
                   scrape_interval = "15s";
@@ -123,10 +135,32 @@
               ];
             };
           };
+          journald = {
+            directory = "/var/log/journal";
+            units = [ "backend.service" "nginx.service" "postgresql.service" ];
+          };
+          filelog = {
+            include = [
+              "/var/log/nginx/*.log"
+              "/var/log/postgresql/*.log"
+            ];
+            start_at = "end";
+          };
         };
 
         processors = {
-          batch = { };
+          "batch/traces" = {
+            timeout = "1s";
+            send_batch_size = 50;
+          };
+          "batch/metrics" = {
+            timeout = "60s";
+          };
+          batch = {
+            send_batch_size = 1024;
+            send_batch_max_size = 2048;
+            timeout = "1s";
+          };
           resource = {
             attributes = [
               {
@@ -144,23 +178,12 @@
         };
 
         exporters = {
-          # For debugging - logs to systemd journal
-          logging = {
-            loglevel = "debug";
-          };
-          # Coralogix OTLP exporter
           coralogix = {
-            domain = "coralogix.com";
-            private_key = builtins.readFile "/var/secrets/coralogix_key";
+            domain = "eu2.coralogix.com";
+            private_key = "\${CORALOGIX_PRIVATE_KEY}";
             application_name = "blog-system";
-            subsystem_name = "backend";
-          };
-          # Generic OTLP HTTP exporter as fallback
-          otlphttp = {
-            endpoint = "https://otlp.coralogix.com:443/v1/traces";
-            headers = {
-              "Authorization" = "Bearer ${builtins.readFile "/var/secrets/coralogix_key"}";
-            };
+            subsystem_name = "blog-backend";
+            timeout = "30s";
           };
         };
 
@@ -168,18 +191,18 @@
           pipelines = {
             traces = {
               receivers = [ "otlp" ];
-              processors = [ "resource" "batch" ];
-              exporters = [ "logging" "coralogix" ];
+              processors = [ "resource" "batch/traces" ];
+              exporters = [ "coralogix" ];
             };
             metrics = {
               receivers = [ "otlp" "prometheus" ];
-              processors = [ "resource" "batch" ];
-              exporters = [ "logging" "coralogix" ];
+              processors = [ "resource" "batch/metrics" ];
+              exporters = [ "coralogix" ];
             };
             logs = {
-              receivers = [ "otlp" ];
+              receivers = [ "otlp" "journald" "filelog" ];
               processors = [ "resource" "batch" ];
-              exporters = [ "logging" "coralogix" ];
+              exporters = [ "coralogix" ];
             };
           };
         };
@@ -260,5 +283,11 @@
     openFirewall = true;
   };
 
+  # Configure OpenTelemetry collector service to load SOPS secret as environment variable  
+  systemd.services.opentelemetry-collector = {
+    serviceConfig = {
+      EnvironmentFile = "/run/secrets/coralogix_send_data_key";
+    };
+  };
 
 }

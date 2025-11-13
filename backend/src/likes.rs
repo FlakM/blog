@@ -7,7 +7,7 @@ use axum::{
 use chrono::{DateTime, Utc};
 use metrics::{counter, gauge, histogram};
 use serde::{Deserialize, Serialize};
-use sqlx::types::ipnetwork::IpNetwork;
+use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use tracing::{info, instrument, warn};
 
@@ -22,8 +22,15 @@ pub struct LikeResponse {
 #[derive(Debug, sqlx::FromRow)]
 struct LikeRecord {
     post_slug: String,
-    user_ip: String,
+    user_ip_hash: String,
     liked_at: DateTime<Utc>,
+}
+
+fn hash_ip(ip: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(ip.as_bytes());
+    let result = hasher.finalize();
+    hex::encode(result)
 }
 
 #[instrument(skip(pool, headers, correlation_ctx), fields(post_slug = %post_slug))]
@@ -38,6 +45,8 @@ pub async fn like_post(
 
     // Extract IP address from Cloudflare headers or fallback
     let user_ip = extract_user_ip(&headers);
+    let user_ip_hash = hash_ip(&user_ip);
+
     let user_agent = headers
         .get("user-agent")
         .and_then(|h| h.to_str().ok())
@@ -54,9 +63,11 @@ pub async fn like_post(
         .and_then(|h| h.to_str().ok())
         .map(|s| s.to_string());
 
+    let cf_connecting_ip_hash = cf_connecting_ip.as_ref().map(|ip| hash_ip(ip));
+
     info!(
         post_slug = %post_slug,
-        user_ip = %user_ip,
+        user_ip_hash = %user_ip_hash,
         user_agent = %user_agent,
         cf_country = ?cf_country,
         correlation_id = %correlation_ctx.correlation_id,
@@ -88,25 +99,16 @@ pub async fn like_post(
     let now = Utc::now();
     let hour_bucket = now.format("%Y-%m-%d %H").to_string();
 
-    // Parse and validate IP addresses
-    let validated_user_ip = user_ip
-        .parse::<IpNetwork>()
-        .unwrap_or_else(|_| "127.0.0.1".parse().unwrap());
-
-    let validated_cf_ip = cf_connecting_ip
-        .as_ref()
-        .and_then(|ip| ip.parse::<IpNetwork>().ok());
-
     let result = sqlx::query!(
         r#"
-        INSERT INTO blog_post_likes (post_slug, user_ip, user_agent, cf_country, cf_connecting_ip, liked_at, hour_bucket)
+        INSERT INTO blog_post_likes (post_slug, user_ip_hash, user_agent, cf_country, cf_connecting_ip_hash, liked_at, hour_bucket)
         VALUES ($1, $2, $3, $4, $5, NOW(), $6)
         "#,
         post_slug,
-        validated_user_ip,
+        user_ip_hash,
         user_agent,
         cf_country,
-        validated_cf_ip,
+        cf_connecting_ip_hash,
         hour_bucket
     )
     .execute(&pool)
@@ -114,11 +116,11 @@ pub async fn like_post(
 
     match result {
         Ok(_) => {
-            info!(post_slug = %post_slug, user_ip = %user_ip, "Like recorded successfully");
+            info!(post_slug = %post_slug, user_ip_hash = %user_ip_hash, "Like recorded successfully");
             counter!("blog_likes_successful_total").increment(1);
         }
         Err(sqlx::Error::Database(db_err)) if db_err.is_unique_violation() => {
-            info!(post_slug = %post_slug, user_ip = %user_ip, "Like already exists within rate limit window");
+            info!(post_slug = %post_slug, user_ip_hash = %user_ip_hash, "Like already exists within rate limit window");
             counter!("blog_likes_rate_limited_total").increment(1);
             histogram!("blog_likes_request_duration_ms", "endpoint" => "like_post", "status" => "rate_limited")
                 .record(start_time.elapsed().as_millis() as f64);

@@ -8,13 +8,12 @@ use opentelemetry_sdk::{
 };
 use opentelemetry_semantic_conventions::resource::{SERVICE_NAME, SERVICE_VERSION};
 use tracing::info;
-use tracing_opentelemetry;
 use tracing_subscriber::{
     fmt::format::FmtSpan, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter,
 };
 
 /// Initialize the observability stack (tracing, metrics, logging)
-pub fn init_observability() -> Result<()> {
+pub fn init_observability() -> Result<Option<metrics_exporter_prometheus::PrometheusHandle>> {
     // Get configuration from environment variables
     let service_name = std::env::var("SERVICE_NAME").unwrap_or_else(|_| "blog-backend".to_string());
     let service_version = std::env::var("SERVICE_VERSION").unwrap_or_else(|_| "0.1.0".to_string());
@@ -42,9 +41,11 @@ pub fn init_observability() -> Result<()> {
     ]);
 
     // Initialize metrics
-    if enable_prometheus {
-        init_prometheus_metrics()?;
-    }
+    let prometheus_handle = if enable_prometheus {
+        Some(init_prometheus_metrics()?)
+    } else {
+        None
+    };
     init_otlp_metrics(&otlp_endpoint, resource.clone())?;
 
     // Initialize tracing subscriber with optional OpenTelemetry layer
@@ -73,7 +74,7 @@ pub fn init_observability() -> Result<()> {
                         .with_target(true)
                         .with_current_span(true)
                         .with_span_list(false)
-                        .flatten_event(true)
+                        .flatten_event(false) // Don't flatten for better Coralogix parsing
                         .with_span_events(FmtSpan::CLOSE | FmtSpan::NEW),
                 )
                 .init();
@@ -99,7 +100,7 @@ pub fn init_observability() -> Result<()> {
                         .with_target(true)
                         .with_current_span(true)
                         .with_span_list(false)
-                        .flatten_event(true)
+                        .flatten_event(false) // Don't flatten for better Coralogix parsing
                         .with_span_events(FmtSpan::CLOSE | FmtSpan::NEW),
                 )
                 .init();
@@ -117,7 +118,7 @@ pub fn init_observability() -> Result<()> {
     }
 
     info!("Observability stack initialized successfully");
-    Ok(())
+    Ok(prometheus_handle)
 }
 
 fn init_tracer(otlp_endpoint: &str, resource: Resource) -> Result<Tracer> {
@@ -134,14 +135,12 @@ fn init_tracer(otlp_endpoint: &str, resource: Resource) -> Result<Tracer> {
     Ok(tracer)
 }
 
-fn init_prometheus_metrics() -> Result<()> {
-    PrometheusBuilder::new()
-        .with_http_listener(([127, 0, 0, 1], 9090))
-        .install()?;
+pub fn init_prometheus_metrics() -> Result<metrics_exporter_prometheus::PrometheusHandle> {
+    let handle = PrometheusBuilder::new().install_recorder()?;
 
-    info!("Prometheus metrics server started on http://127.0.0.1:9090/metrics");
+    info!("Prometheus metrics recorder initialized");
 
-    Ok(())
+    Ok(handle)
 }
 
 fn init_otlp_metrics(_otlp_endpoint: &str, _resource: Resource) -> Result<()> {

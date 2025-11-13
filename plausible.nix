@@ -43,4 +43,15 @@ in
       ${domain}.email = "me@flakm.com";
     };
   };
+
+  # Ensure PostgreSQL starts before Plausible services
+  systemd.services.plausible-postgres = {
+    after = [ "postgresql.service" ];
+    wants = [ "postgresql.service" ];
+  };
+  
+  systemd.services.plausible = {
+    after = [ "postgresql.service" "plausible-postgres.service" ];
+    wants = [ "postgresql.service" ];
+  };
 }

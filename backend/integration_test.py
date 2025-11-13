@@ -91,7 +91,7 @@ def run_integration_tests(server, client):
     # Test 6: Verify metrics endpoint (if available)
     try:
         test_step("Metrics endpoint", lambda:
-            client.succeed("curl -s http://server:3000/metrics | grep -q 'blog_'")
+            client.succeed("curl -s http://server:9090/metrics | grep -q 'blog_'")
         )
     except:
         cprint("  Metrics endpoint not available (expected in some configurations)", "yellow")
