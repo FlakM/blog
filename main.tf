@@ -12,6 +12,10 @@ terraform {
   }
 }
 
+provider "cloudflare" {
+  # Uses CLOUDFLARE_API_KEY and CLOUDFLARE_EMAIL environment variables
+}
+
 # Configuration for SSH key to be used with Hetzner Cloud instances
 resource "hcloud_ssh_key" "yubi" {
   name       = "foo" 
@@ -68,6 +72,14 @@ resource "hcloud_firewall" "web_firewall" {
     port      = "3478"
     destination_ips = ["0.0.0.0/0", "::/0"]
   }
+
+  # Allow WireGuard UDP port 51820
+  rule {
+    direction = "in"
+    protocol  = "udp"
+    port      = "51820"
+    source_ips = ["0.0.0.0/0", "::/0"]
+  }
 }
 
 # Define a Hetzner Cloud Server resource for the blog
@@ -92,89 +104,44 @@ variable "ZONE_ID" {
   # export TF_VAR_ZONE_ID="..."
 }
 
-# Cloudflare DNS A record configuration for the blog
-# This is used for the blog to be accessible directly via the IP ip address
-# The blog will be also accessible via the domain name behind the Cloudflare proxy
-# See @blog for the CNAME record and cloudflare_page_rule for the url
-# This way the communication between Cloudflare and the blog is encrypted
-resource "cloudflare_record" "blog_nginx" {
+resource "cloudflare_dns_record" "blog_nginx" {
   zone_id = var.ZONE_ID
   name    = "blog.flakm.com"
-  value   = hcloud_server.blog.ipv4_address
+  content = hcloud_server.blog.ipv4_address
   type    = "A"
-  proxied = false  # Direct DNS, no Cloudflare proxy
+  ttl     = 300
+  proxied = false
 }
 
-resource "cloudflare_record" "tata_nginx" {
+resource "cloudflare_dns_record" "tata_nginx" {
   zone_id = var.ZONE_ID
   name    = "tata.flakm.com"
-  value   = hcloud_server.blog.ipv4_address
+  content = hcloud_server.blog.ipv4_address
   type    = "A"
-  proxied = false  # Direct DNS, no Cloudflare proxy
+  ttl     = 300
+  proxied = false
 }
 
-
-# Cloudflare DNS A record configuration for the plausible analytics
-resource "cloudflare_record" "plausible_nginx" {
+resource "cloudflare_dns_record" "plausible_nginx" {
   zone_id = var.ZONE_ID
   name    = "plausible.flakm.com"
-  value   = hcloud_server.blog.ipv4_address
+  content = hcloud_server.blog.ipv4_address
   type    = "A"
-  proxied = false  # Direct DNS, no Cloudflare proxy
+  ttl     = 300
+  proxied = false
 }
 
-resource "cloudflare_record" "fedi_nginx" {
+resource "cloudflare_dns_record" "jellyfin_public_nginx" {
   zone_id = var.ZONE_ID
-  name    = "fedi.flakm.com"
-  value   = hcloud_server.blog.ipv4_address
+  name    = "jellyfin.public.flakm.com"
+  content = hcloud_server.blog.ipv4_address
   type    = "A"
-  proxied = false  # Direct DNS, no Cloudflare proxy
+  ttl     = 300
+  proxied = false
 }
 
-# Cloudflare DNS CNAME record for the blog behind Cloudflare proxy
-resource "cloudflare_record" "blog" {
-  zone_id = var.ZONE_ID
-  name    = "@"
-  value   = "blog"
-  type    = "CNAME"
-  proxied = true  # Enable Cloudflare proxy
-}
-
-
-# Cloudflare DNS CNAME record for the blog behind Cloudflare proxy
-resource "cloudflare_record" "tata" {
-  zone_id = var.ZONE_ID
-  name    = "@"
-  value   = "tata.flakm.com"
-  type    = "CNAME"
-  proxied = true  # Enable Cloudflare proxy
-  allow_overwrite = true
-}
-
-
-# Configure settings for the flakm.com domain in Cloudflare
-resource "cloudflare_zone_settings_override" "flakm-com-settings" {
-  zone_id = var.ZONE_ID
-
-  settings {
-    tls_1_3                  = "on"
-    automatic_https_rewrites = "on"
-    ssl                      = "strict"
-    cache_level              = "aggressive"
-  }
-}
-
-
-# Cloudflare page rule for caching and optimizations
-resource "cloudflare_page_rule" "blog" {
-  zone_id = var.ZONE_ID
-  target = "https://flakm.com"
-  priority = 1
-
-  actions {
-    cache_level = "cache_everything"  # Cache HTML and other assets
-  }
-}
+# Removed duplicate/invalid CNAME and page rule resources
+# Keeping only flakm_root CNAME and page rule defined below
 
 
 # NixOS system build module from Nixos anywhere
@@ -197,21 +164,22 @@ module "install" {
   target_host       = hcloud_server.blog.ipv4_address
 }
 
-resource "cloudflare_record" "flakm_root" {
+resource "cloudflare_dns_record" "flakm_root" {
   zone_id         = var.ZONE_ID
   name            = "@"
-  value           = "blog.flakm.com"
+  content         = "blog.flakm.com"
   type            = "CNAME"
-  proxied         = true  # Enable Cloudflare proxy for caching
-  allow_overwrite = true
+  ttl             = 1
+  proxied         = true
 }
 
 resource "cloudflare_page_rule" "flakm_root" {
   zone_id  = var.ZONE_ID
   target   = "https://flakm.com/*"
   priority = 1
+  status   = "active"
 
-  actions {
-    cache_level = "cache_everything"  # Cache HTML and other assets
+  actions = {
+    cache_level = "cache_everything"
   }
 }

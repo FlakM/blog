@@ -1,6 +1,7 @@
 keys:
   - &admin_flakm DDB89AF3335111A17243467C7288322161C6A632
   - &blog_server 98a8ae1f5a1660864b2e8d253a98635a3c03a80c
+  - &user_amd_pc age1mhm63u49vwnkw9whperlxj6swme4vvh9w9vcu8zng8wudjplya3s4m0jq5
 
 
 creation_rules:
@@ -9,3 +10,5 @@ creation_rules:
       - pgp:
           - *admin_flakm
           - *blog_server
+        age:
+          - *user_amd_pc

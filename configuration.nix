@@ -6,6 +6,7 @@
     ./disk-config.nix
     backend.nixosModules.x86_64-linux.default
     static.nixosModules.x86_64-linux.default
+    ./jellyfin.nix
   ];
 
   # Sops configuration for secrets management
@@ -261,6 +262,7 @@
       "blog.flakm.com".email = "me@flakm.com";
       "fedi.flakm.com".email = "me@flakm.com";
       "tata.flakm.com".email = "me@flakm.com";
+      "jellyfin.public.flakm.com".email = "me@flakm.com";
     };
   };
 
