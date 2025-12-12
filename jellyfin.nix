@@ -61,6 +61,27 @@ in
           ~*^(?<prefix1>.*[\?&]ApiKey=)([^&]*)(?<suffix1>.*)$  "''${prefix1}***$suffix1";
           default $request;
       }
+
+      # Truncate request URI to 20 chars for Jellyfin logs to reduce PII footprint
+      map $request_uri $jellyfin_short_uri {
+        "~^(?<prefix>.{0,20}).*" $prefix;
+        default $request_uri;
+      }
+
+      # JSON log format tailored for Coralogix ingestion
+      log_format jellyfin_json escape=json
+        '{'
+          '"time":"$time_iso8601",'
+          '"remote_addr":"$remote_addr",'
+          '"host":"$host",'
+          '"method":"$request_method",'
+          '"uri_short":"$jellyfin_short_uri",'
+          '"status":$status,'
+          '"bytes_sent":$body_bytes_sent,'
+          '"referer":"$http_referer",'
+          '"user_agent":"$http_user_agent",'
+          '"forwarded_for":"$proxy_add_x_forwarded_for"'
+        '}';
     '';
 
     appendHttpConfig = ''
@@ -86,6 +107,13 @@ in
         extraConfig = ''
           client_max_body_size 20M;
           ssl_protocols TLSv1.3 TLSv1.2;
+
+          # Avoid proxy header hash warnings for this header-heavy vhost
+          proxy_headers_hash_max_size 1024;
+          proxy_headers_hash_bucket_size 128;
+
+          access_log /var/log/nginx/jellyfin_access.log jellyfin_json;
+          error_log /var/log/nginx/jellyfin_error.log;
 
           if ($allowed_country = no) {
             return 403;

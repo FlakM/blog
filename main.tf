@@ -89,8 +89,7 @@ resource "hcloud_server" "blog" {
   server_type = "cx33"           # Intel ® / AMD 4vcpu, 8GB RAM, 80GB SSD
   location    = "fsn1"
   ssh_keys    = [hcloud_ssh_key.yubi.id]  # SSH keys associated with the server
-  # Associate the firewall
-  #firewall_ids = [hcloud_firewall.web_firewall.id]
+  firewall_ids = [hcloud_firewall.web_firewall.id]
 }
 
 # Output the public IP address of the Hetzner Cloud Server

@@ -142,8 +142,23 @@
           };
           filelog = {
             include = [
-              "/var/log/nginx/*.log"
+              "/var/log/nginx/access.log"
+              "/var/log/nginx/error.log"
               "/var/log/postgresql/*.log"
+            ];
+            start_at = "end";
+          };
+          "filelog/jellyfin" = {
+            include = [
+              "/var/log/jellyfin/*.log"
+              "/var/log/jellyfin/log*.log"
+            ];
+            start_at = "end";
+          };
+          "filelog/jellyfin-nginx" = {
+            include = [
+              "/var/log/nginx/jellyfin_access.log"
+              "/var/log/nginx/jellyfin_error.log"
             ];
             start_at = "end";
           };
@@ -176,6 +191,54 @@
               }
             ];
           };
+          "transform/log_body_object" = {
+            log_statements = [
+              {
+                context = "log";
+                statements = [
+                  ''set(body, {"message": body}) where IsString(body)''
+                ];
+              }
+            ];
+          };
+          "resource/jellyfin" = {
+            attributes = [
+              {
+                key = "service.name";
+                value = "jellyfin";
+                action = "upsert";
+              }
+              {
+                key = "service.namespace";
+                value = "media";
+                action = "upsert";
+              }
+              {
+                key = "deployment.environment";
+                value = "production";
+                action = "upsert";
+              }
+            ];
+          };
+          "resource/jellyfin-proxy" = {
+            attributes = [
+              {
+                key = "service.name";
+                value = "nginx";
+                action = "upsert";
+              }
+              {
+                key = "service.instance.id";
+                value = "jellyfin-proxy";
+                action = "upsert";
+              }
+              {
+                key = "deployment.environment";
+                value = "production";
+                action = "upsert";
+              }
+            ];
+          };
         };
 
         exporters = {
@@ -184,6 +247,20 @@
             private_key = "\${CORALOGIX_PRIVATE_KEY}";
             application_name = "blog-system";
             subsystem_name = "blog-backend";
+            timeout = "30s";
+          };
+          "coralogix/jellyfin" = {
+            domain = "eu2.coralogix.com";
+            private_key = "\${CORALOGIX_PRIVATE_KEY}";
+            application_name = "jellyfin";
+            subsystem_name = "server";
+            timeout = "30s";
+          };
+          "coralogix/jellyfin-proxy" = {
+            domain = "eu2.coralogix.com";
+            private_key = "\${CORALOGIX_PRIVATE_KEY}";
+            application_name = "jellyfin";
+            subsystem_name = "nginx-proxy";
             timeout = "30s";
           };
         };
@@ -202,8 +279,18 @@
             };
             logs = {
               receivers = [ "otlp" "journald" "filelog" ];
-              processors = [ "resource" "batch" ];
+              processors = [ "resource" "transform/log_body_object" "batch" ];
               exporters = [ "coralogix" ];
+            };
+            "logs/jellyfin" = {
+              receivers = [ "filelog/jellyfin" ];
+              processors = [ "resource/jellyfin" "transform/log_body_object" "batch" ];
+              exporters = [ "coralogix/jellyfin" ];
+            };
+            "logs/jellyfin-proxy" = {
+              receivers = [ "filelog/jellyfin-nginx" ];
+              processors = [ "resource/jellyfin-proxy" "transform/log_body_object" "batch" ];
+              exporters = [ "coralogix/jellyfin-proxy" ];
             };
           };
         };
@@ -213,10 +300,22 @@
     nginx = {
       enable = true;
       appendHttpConfig = ''
-        log_format main '$remote_addr - $remote_user [$time_local] "$request" '
-                        '$status $body_bytes_sent "$http_referer" '
-                        '"$http_user_agent" "$http_x_forwarded_for" "$host"';
-        access_log /var/log/nginx/access.log main;
+        # JSON access logs for easier ingestion (e.g., Coralogix)
+        log_format main_json escape=json
+          '{'
+            '"time":"$time_iso8601",'
+            '"remote_addr":"$remote_addr",'
+            '"host":"$host",'
+            '"method":"$request_method",'
+            '"uri":"$request_uri",'
+            '"status":$status,'
+            '"bytes_sent":$body_bytes_sent,'
+            '"referer":"$http_referer",'
+            '"user_agent":"$http_user_agent",'
+            '"forwarded_for":"$http_x_forwarded_for"'
+          '}';
+
+        access_log /var/log/nginx/access.log main_json;
         error_log /var/log/nginx/error.log;
       '';
 
@@ -289,6 +388,7 @@
   systemd.services.opentelemetry-collector = {
     serviceConfig = {
       EnvironmentFile = "/run/secrets/coralogix_send_data_key";
+      SupplementaryGroups = [ "nginx" ];
     };
   };
 
