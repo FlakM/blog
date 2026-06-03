@@ -1,17 +1,17 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    
+
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    
+
     # Add the backend flake as an input
     backend = {
       url = "./backend"; # Points to the flake in the backend directory
@@ -35,7 +35,7 @@
       pkgs = import nixpkgs { inherit system; };
 
       # Integration that are run using kvm virtual machines
-      integration = pkgs.nixosTest (import ./integration.nix {
+      integration = pkgs.testers.nixosTest (import ./integration.nix {
         inherit pkgs system backend static;
       });
 

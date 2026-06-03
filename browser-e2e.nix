@@ -1,42 +1,44 @@
 { pkgs, backend, static }:
 
-pkgs.nixosTest {
+pkgs.testers.nixosTest {
   name = "browser-e2e";
-  
+
   nodes = {
     server = {
       imports = [
         backend.nixosModules.x86_64-linux.default
         static.nixosModules.x86_64-linux.default
       ];
-      
+
       virtualisation.graphics = false;
-      
+
       # Add fake DNS entries for testing
       networking.extraHosts = ''
         127.0.0.1 server
       '';
-      
+
       networking.firewall = {
         enable = true;
         allowedTCPPorts = [ 80 443 ];
       };
-      
+
       # Python with properly compiled packages
-      environment.systemPackages = let
-        pythonEnv = pkgs.python3.withPackages (ps: with ps; [
-          playwright
-          termcolor
-          setuptools
-          greenlet
-        ]);
-      in [
-        pkgs.xvfb-run
-        pythonEnv
-        pkgs.chromium
-        pkgs.firefox
-      ];
-      
+      environment.systemPackages =
+        let
+          pythonEnv = pkgs.python3.withPackages (ps: with ps; [
+            playwright
+            termcolor
+            setuptools
+            greenlet
+          ]);
+        in
+        [
+          pkgs.xvfb-run
+          pythonEnv
+          pkgs.chromium
+          pkgs.firefox
+        ];
+
       # Add system dependencies for Playwright browsers
       environment.variables = {
         PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
@@ -66,14 +68,14 @@ pkgs.nixosTest {
           enable = true;
           domain = "server";
         };
-        
+
         nginx.enable = true;
 
         # Configure PostgreSQL
         postgresql = {
           enable = true;
           package = pkgs.postgresql_15;
-          
+
           ensureDatabases = [ "blog" ];
           ensureUsers = [
             {
@@ -81,7 +83,7 @@ pkgs.nixosTest {
               ensureDBOwnership = true;
             }
           ];
-          
+
           authentication = pkgs.lib.mkOverride 10 ''
             local   blog        blog                    trust
             host    blog        blog    127.0.0.1/32    trust
@@ -94,10 +96,10 @@ pkgs.nixosTest {
       };
     };
   };
-  
+
   extraPythonPackages = p: [ p.termcolor p.playwright p.greenlet ];
 
-  
+
   testScript = ''
     start_all()
     

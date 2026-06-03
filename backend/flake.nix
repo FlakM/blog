@@ -2,7 +2,7 @@
   description = "Build a cargo project";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     crane.url = "github:ipetkov/crane";
     flake-utils.url = "github:numtide/flake-utils";
     advisory-db = {
@@ -160,7 +160,7 @@
           });
 
           # Integration that are run using kvm virtual machines  
-          nixos-integration = pkgs.nixosTest (import ./nixos-test.nix {
+          nixos-integration = pkgs.testers.nixosTest (import ./nixos-test.nix {
             inherit system pkgs self;
           });
         };
@@ -181,7 +181,7 @@
             openssl
             sqlx-cli
           ];
-          
+
           shellHook = ''
             export SQLX_OFFLINE=true
             export DATABASE_URL="postgresql://blog:blog@localhost:5432/blog"
