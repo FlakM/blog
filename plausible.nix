@@ -1,9 +1,4 @@
 { config, lib, pkgs, ... }:
-# copied from https://carjorvaz.com/posts/setting-up-plausible-analytics-on-nixos/
-# one time setup must be done before this config is applied
-# mkdir -p /var/secrets/plausible/
-# openssl rand -base64 64 | tr -d '\n'  > /var/secrets/plausible/plausibleSecretKeybase 
-# openssl rand -base64 64 | tr -d '\n' > /var/secrets/plausible/plausibleAdminPassword
 let
   domain = "plausible.flakm.com";
 in
@@ -14,7 +9,7 @@ in
 
       server = {
         baseUrl = "https://${domain}";
-        secretKeybaseFile = "/var/secrets/plausible/plausibleSecretKeybase";
+        secretKeybaseFile = "/run/secrets/plausible_secret_key_base";
       };
     };
 

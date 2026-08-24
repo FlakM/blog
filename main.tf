@@ -18,77 +18,100 @@ provider "cloudflare" {
 
 # Configuration for SSH key to be used with Hetzner Cloud instances
 resource "hcloud_ssh_key" "yubi" {
-  name       = "foo" 
-  public_key = chomp(file("~/.ssh/id_rsa_yubikey.pub"))  
+  name       = "foo"
+  public_key = chomp(file("~/.ssh/id_rsa_yubikey.pub"))
 }
 
 # Define a Hetzner Cloud Firewall
 resource "hcloud_firewall" "web_firewall" {
   name = "web-firewall"
 
+  # Allow SSH for initial setup (remove after tailscale is configured)
+  rule {
+    direction  = "in"
+    protocol   = "tcp"
+    port       = "22"
+    source_ips = ["0.0.0.0/0", "::/0"]
+  }
+
   # Allow TCP Port 443 (HTTPS)
   rule {
-    direction = "in"
-    protocol  = "tcp"
-    port      = "443"
-    source_ips = ["0.0.0.0/0", "::/0"]  # Allow from any IP
+    direction  = "in"
+    protocol   = "tcp"
+    port       = "443"
+    source_ips = ["0.0.0.0/0", "::/0"] # Allow from any IP
   }
 
   # Allow TCP Port 80 (HTTP)
   rule {
-    direction = "in"
-    protocol  = "tcp"
-    port      = "80"
-    source_ips = ["0.0.0.0/0", "::/0"]  # Allow from any IP
+    direction  = "in"
+    protocol   = "tcp"
+    port       = "80"
+    source_ips = ["0.0.0.0/0", "::/0"] # Allow from any IP
   }
 
   # Allow outgoing TCP to *:80 and *:443
   rule {
-    direction = "out"
-    protocol  = "tcp"
-    port      = "80"
+    direction       = "out"
+    protocol        = "tcp"
+    port            = "80"
     destination_ips = ["0.0.0.0/0", "::/0"]
   }
 
   rule {
-    direction = "out"
-    protocol  = "tcp"
-    port      = "443"
+    direction       = "out"
+    protocol        = "tcp"
+    port            = "443"
+    destination_ips = ["0.0.0.0/0", "::/0"]
+  }
+
+  # Allow outgoing SMTP
+  rule {
+    direction       = "out"
+    protocol        = "tcp"
+    port            = "587"
+    destination_ips = ["0.0.0.0/0", "::/0"]
+  }
+
+  rule {
+    direction       = "out"
+    protocol        = "tcp"
+    port            = "465"
     destination_ips = ["0.0.0.0/0", "::/0"]
   }
 
   # Allow UDP from :41641 to *:*
   rule {
-    direction = "in"
-    protocol  = "udp"
-    port      = "41641"
+    direction  = "in"
+    protocol   = "udp"
+    port       = "41641"
     source_ips = ["0.0.0.0/0", "::/0"]
   }
 
   # Allow UDP to *:3478
   rule {
-    direction = "out"
-    protocol  = "udp"
-    port      = "3478"
+    direction       = "out"
+    protocol        = "udp"
+    port            = "3478"
     destination_ips = ["0.0.0.0/0", "::/0"]
   }
 
   # Allow WireGuard UDP port 51820
   rule {
-    direction = "in"
-    protocol  = "udp"
-    port      = "51820"
+    direction  = "in"
+    protocol   = "udp"
+    port       = "51820"
     source_ips = ["0.0.0.0/0", "::/0"]
   }
 }
 
 # Define a Hetzner Cloud Server resource for the blog
 resource "hcloud_server" "blog" {
-  name        = "blog-instance"
-  image       = "ubuntu-22.04"   # After provisioning, NixOS will be installed see @install
-  server_type = "cx33"           # Intel ® / AMD 4vcpu, 8GB RAM, 80GB SSD
-  location    = "fsn1"
-  ssh_keys    = [hcloud_ssh_key.yubi.id]  # SSH keys associated with the server
+  name         = "blog-instance"
+  image        = "ubuntu-22.04" # After provisioning, NixOS will be installed see @install
+  server_type  = "cx33"         # Intel ® / AMD 4vcpu, 8GB RAM, 80GB SSD
+  location     = "nbg1"
+  ssh_keys     = [hcloud_ssh_key.yubi.id] # SSH keys associated with the server
   firewall_ids = [hcloud_firewall.web_firewall.id]
 }
 
@@ -139,6 +162,33 @@ resource "cloudflare_dns_record" "jellyfin_public_nginx" {
   proxied = false
 }
 
+resource "cloudflare_dns_record" "audiobookshelf_public_nginx" {
+  zone_id = var.ZONE_ID
+  name    = "audiobookshelf.public.flakm.com"
+  content = hcloud_server.blog.ipv4_address
+  type    = "A"
+  ttl     = 300
+  proxied = false
+}
+
+resource "cloudflare_dns_record" "portal_nginx" {
+  zone_id = var.ZONE_ID
+  name    = "portal.flakm.com"
+  content = hcloud_server.blog.ipv4_address
+  type    = "A"
+  ttl     = 300
+  proxied = false
+}
+
+resource "cloudflare_dns_record" "cegielnia_nginx" {
+  zone_id = var.ZONE_ID
+  name    = "cegielnia.flakm.com"
+  content = hcloud_server.blog.ipv4_address
+  type    = "A"
+  ttl     = 300
+  proxied = false
+}
+
 # Removed duplicate/invalid CNAME and page rule resources
 # Keeping only flakm_root CNAME and page rule defined below
 
@@ -163,13 +213,19 @@ module "install" {
   target_host       = hcloud_server.blog.ipv4_address
 }
 
+resource "cloudflare_zone_setting" "ssl" {
+  zone_id    = var.ZONE_ID
+  setting_id = "ssl"
+  value      = "full"
+}
+
 resource "cloudflare_dns_record" "flakm_root" {
-  zone_id         = var.ZONE_ID
-  name            = "@"
-  content         = "blog.flakm.com"
-  type            = "CNAME"
-  ttl             = 1
-  proxied         = true
+  zone_id = var.ZONE_ID
+  name    = "@"
+  content = "blog.flakm.com"
+  type    = "CNAME"
+  ttl     = 1
+  proxied = true
 }
 
 resource "cloudflare_page_rule" "flakm_root" {

@@ -88,12 +88,12 @@ SQLX_OFFLINE=true cargo check
 ### Build All Components
 
 ```bash
-# Build everything (static site + backend + tests)
-nix build
+# Build the production NixOS system
+nix build .#nixosConfigurations.blog.config.system.build.toplevel
 
 # Build specific components
-nix build .#blog-static.packages.x86_64-linux.default  # Static site
-nix build .#backend.packages.x86_64-linux.default     # Backend binary
+nix build ./blog-static  # Static site
+nix build ./backend      # Backend binary
 ```
 
 ### Run Tests
@@ -107,7 +107,7 @@ cd backend
 cargo test
 
 # Run specific integration test
-nix run .#checks.x86_64-linux.integration
+nix build -L .#checks.x86_64-linux.itg
 ```
 
 ### Development Servers
@@ -184,7 +184,7 @@ Migration files are located in `backend/migrations/` and are automatically appli
 ```toml
 [params.likes]
   enable = true
-  apiBase = "https://fedi.flakm.com"  # Backend API URL
+  apiBase = "/api"
 
 [params.plausibleAnalytics]
   domain = "flakm.com"
@@ -220,7 +220,7 @@ The system includes comprehensive integration tests that run in KVM virtual mach
 
 ```bash
 # Run integration tests (creates VM, tests all components)
-nix run .#checks.x86_64-linux.integration
+nix build -L .#checks.x86_64-linux.itg
 
 # Run integration tests in interactive mode (for debugging)
 nix run -L .#checks.x86_64-linux.integration.driverInteractive
@@ -295,7 +295,7 @@ The system is designed for deployment on NixOS. The main configuration is in `co
 
 ```bash
 # Deploy to production server
-nixos-rebuild switch --target-host root@hetzner-blog --flake .#blog
+nixos-rebuild switch --target-host root@blog.flakm.com --flake .#blog
 
 # Infrastructure provisioning (OpenTofu)
 tofu init
@@ -388,11 +388,10 @@ nix-shell -p sops --run "sops secrets/secrets.yaml"
 The asc for the secrets was generated with:
 
 ```bash
-ssh root@hetzner-blog  "sudo cat /etc/ssh/ssh_host_rsa_key" | nix-shell -p ssh-to-pgp --run "ssh-to-pgp -o server01.asc"
+ssh root@blog.flakm.com "sudo cat /etc/ssh/ssh_host_rsa_key" | nix-shell -p ssh-to-pgp --run "ssh-to-pgp -o server01.asc"
 gpg --import server01.asc
 ```
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-

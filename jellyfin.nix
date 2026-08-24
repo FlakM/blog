@@ -91,7 +91,7 @@ in
       }
 
       map $geoip2_data_country_code $allowed_country {
-        default no;
+        default yes;
         PL yes;
       }
 
@@ -150,6 +150,40 @@ in
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_set_header X-Forwarded-Protocol $scheme;
             proxy_set_header X-Forwarded-Host $http_host;
+          '';
+        };
+      };
+
+      "audiobookshelf.public.flakm.com" = {
+        forceSSL = true;
+        enableACME = true;
+        http2 = true;
+
+        extraConfig = ''
+          client_max_body_size 500M;
+          ssl_protocols TLSv1.3 TLSv1.2;
+
+          proxy_headers_hash_max_size 1024;
+          proxy_headers_hash_bucket_size 128;
+
+          access_log /var/log/nginx/audiobookshelf_access.log jellyfin_json;
+          error_log /var/log/nginx/audiobookshelf_error.log;
+
+          if ($allowed_country = no) {
+            return 403;
+          }
+        '';
+
+        locations."/" = {
+          proxyWebsockets = true;
+          extraConfig = ''
+            proxy_pass http://10.100.0.2:8000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_redirect http://10.100.0.2:8000 https://audiobookshelf.public.flakm.com;
+            proxy_buffering off;
           '';
         };
       };

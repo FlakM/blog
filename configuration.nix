@@ -18,6 +18,9 @@
       coralogix_send_data_key = {
         mode = "0400";
       };
+      plausible_secret_key_base = {
+        mode = "0400";
+      };
     };
   };
 
@@ -47,6 +50,11 @@
 
   services.openssh = {
     enable = true;
+    settings = {
+      KbdInteractiveAuthentication = false;
+      PasswordAuthentication = false;
+      PermitRootLogin = "prohibit-password";
+    };
   };
 
   # Enable ssh access to the root user
@@ -324,15 +332,45 @@
       virtualHosts."blog.flakm.com" = {
         forceSSL = true;
         enableACME = true;
+        serverAliases = [ "flakm.com" ];
+        locations."= /photo-recovery/" = {
+          extraConfig = ''
+            default_type text/plain;
+            add_header Cache-Control "private, no-store";
+            return 200 "Archive: https://flakm.com/photo-recovery/recovered-ok-photos.zip\nPassword: request it out of band.\n";
+          '';
+        };
+        locations."= /photo-recovery/recovered-ok-photos.zip" = {
+          alias = "/var/www/photo-recovery/recovered-ok-photos.zip";
+          extraConfig = ''
+            default_type application/zip;
+            add_header Cache-Control "private, no-store";
+          '';
+        };
       };
       virtualHosts."tata.flakm.com" = {
         forceSSL = true;
         enableACME = true;
-        root = "/var/www/tata";
+        root = pkgs.runCommand "tata-static" { } ''
+          mkdir -p $out
+          cp ${./tata/index.html} $out/index.html
+        '';
       };
-      virtualHosts."fedi.flakm.com" = {
-        forceSSL = true;
-        enableACME = true;
+      virtualHosts."portal.flakm.com" = {
+        addSSL = true;
+        sslCertificate = "/var/lib/acme/portal.flakm.com/fullchain.pem";
+        sslCertificateKey = "/var/lib/acme/portal.flakm.com/key.pem";
+        extraConfig = ''
+          return 410;
+        '';
+      };
+      virtualHosts."cegielnia.flakm.com" = {
+        addSSL = true;
+        sslCertificate = "/var/lib/acme/cegielnia.flakm.com/fullchain.pem";
+        sslCertificateKey = "/var/lib/acme/cegielnia.flakm.com/key.pem";
+        extraConfig = ''
+          return 410;
+        '';
       };
       commonHttpConfig =
         let
@@ -359,9 +397,9 @@
     acceptTerms = true;
     certs = {
       "blog.flakm.com".email = "me@flakm.com";
-      "fedi.flakm.com".email = "me@flakm.com";
       "tata.flakm.com".email = "me@flakm.com";
       "jellyfin.public.flakm.com".email = "me@flakm.com";
+      "audiobookshelf.public.flakm.com".email = "me@flakm.com";
     };
   };
 
