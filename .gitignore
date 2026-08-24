@@ -1,6 +1,5 @@
 # Local .terraform directories
 **/.terraform/*
-.terraform.lock.hcl
 
 # .tfstate files
 *.tfstate
@@ -39,6 +38,7 @@ id_rsa.pem
 backend_old/
 
 backend/db.sqlite*
+backend/target/
 
 node_modules/
 cv_marysia

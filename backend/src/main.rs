@@ -22,7 +22,7 @@ mod observability;
 #[instrument]
 async fn main() -> Result<(), Error> {
     // Initialize observability stack first (tracing, metrics, logging)
-    let prometheus_handle =
+    let observability =
         observability::init_observability().expect("Failed to initialize observability");
 
     let database_url = std::env::var("DATABASE_URL")
@@ -55,8 +55,8 @@ async fn main() -> Result<(), Error> {
 
     // Create the Axum app with routes and middleware
     let app = Router::new()
-        .route("/like/:post_slug", post(likes::like_post))
-        .route("/likes/:post_slug", get(likes::get_likes))
+        .route("/like/{post_slug}", post(likes::like_post))
+        .route("/likes/{post_slug}", get(likes::get_likes))
         .route("/health", get(health_check))
         .layer(middleware::from_fn(correlation::correlation_middleware))
         .layer(CorsLayer::permissive()) // Allow CORS for frontend
@@ -90,7 +90,8 @@ async fn main() -> Result<(), Error> {
         .with_state(pool);
 
     // Create separate metrics server without any tracing instrumentation
-    let metrics_app = prometheus_handle
+    let metrics_app = observability
+        .prometheus_handle
         .clone()
         .map(|handle| Router::new().route("/metrics", get(move || async move { handle.render() })));
 
@@ -124,7 +125,7 @@ async fn main() -> Result<(), Error> {
     }
 
     // Shutdown observability providers
-    observability::shutdown_observability();
+    observability::shutdown_observability(observability);
 
     Ok(())
 }

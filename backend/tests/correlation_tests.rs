@@ -38,7 +38,7 @@ fn create_test_app() -> Router {
 #[tokio::test]
 async fn test_correlation_middleware_with_existing_headers() {
     let app = create_test_app();
-    let server = TestServer::new(app).expect("Failed to create test server");
+    let server = TestServer::new(app);
 
     let correlation_id = "test-correlation-123";
     let request_id = "test-request-456";
@@ -97,7 +97,7 @@ async fn test_correlation_middleware_with_existing_headers() {
 #[tokio::test]
 async fn test_correlation_middleware_generates_missing_ids() {
     let app = create_test_app();
-    let server = TestServer::new(app).expect("Failed to create test server");
+    let server = TestServer::new(app);
 
     // Don't provide correlation or request IDs
     let mut headers = HeaderMap::new();
@@ -152,7 +152,7 @@ async fn test_correlation_middleware_generates_missing_ids() {
 #[tokio::test]
 async fn test_ip_extraction_priority() {
     let app = create_test_app();
-    let server = TestServer::new(app).expect("Failed to create test server");
+    let server = TestServer::new(app);
 
     // Test Cloudflare IP takes priority
     let mut headers = HeaderMap::new();
@@ -169,7 +169,7 @@ async fn test_ip_extraction_priority() {
 #[tokio::test]
 async fn test_ip_extraction_fallback() {
     let app = create_test_app();
-    let server = TestServer::new(app).expect("Failed to create test server");
+    let server = TestServer::new(app);
 
     // Test fallback when no Cloudflare IP
     let mut headers = HeaderMap::new();
@@ -185,7 +185,7 @@ async fn test_ip_extraction_fallback() {
 #[tokio::test]
 async fn test_ip_extraction_x_forwarded_for_only() {
     let app = create_test_app();
-    let server = TestServer::new(app).expect("Failed to create test server");
+    let server = TestServer::new(app);
 
     // Test with only x-forwarded-for (should be in forwarded_for field, not remote_ip)
     let mut headers = HeaderMap::new();
@@ -202,7 +202,7 @@ async fn test_ip_extraction_x_forwarded_for_only() {
 #[tokio::test]
 async fn test_no_ip_headers() {
     let app = create_test_app();
-    let server = TestServer::new(app).expect("Failed to create test server");
+    let server = TestServer::new(app);
 
     // Test with no IP headers at all
     let response = server.get("/test").await;
@@ -261,7 +261,7 @@ async fn test_correlation_context_with_minimal_headers() {
 #[tokio::test]
 async fn test_correlation_headers_added_to_response() {
     let app = create_test_app();
-    let server = TestServer::new(app).expect("Failed to create test server");
+    let server = TestServer::new(app);
 
     let response = server.get("/test").await;
 
@@ -288,7 +288,7 @@ async fn test_correlation_headers_added_to_response() {
 #[tokio::test]
 async fn test_multiple_requests_different_ids() {
     let app = create_test_app();
-    let server = TestServer::new(app).expect("Failed to create test server");
+    let server = TestServer::new(app);
 
     // Make first request
     let response1 = server.get("/test").await;

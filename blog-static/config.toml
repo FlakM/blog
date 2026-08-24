@@ -1,5 +1,5 @@
 baseURL = "https://flakm.com/"
-languageCode = "en"
+locale = "en"
 defaultContentLanguage = "en"
 
 copyright = "Copyright © 2023, Maciej Flak; all rights reserved."

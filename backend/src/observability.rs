@@ -1,9 +1,9 @@
 use anyhow::Result;
 use metrics_exporter_prometheus::PrometheusBuilder;
-use opentelemetry::global;
+use opentelemetry::{trace::TracerProvider as _, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{
-    trace::{self, Tracer},
+    trace::{SdkTracer, SdkTracerProvider},
     Resource,
 };
 use opentelemetry_semantic_conventions::resource::{SERVICE_NAME, SERVICE_VERSION};
@@ -12,8 +12,13 @@ use tracing_subscriber::{
     fmt::format::FmtSpan, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter,
 };
 
+pub struct Observability {
+    pub prometheus_handle: Option<metrics_exporter_prometheus::PrometheusHandle>,
+    tracer_provider: Option<SdkTracerProvider>,
+}
+
 /// Initialize the observability stack (tracing, metrics, logging)
-pub fn init_observability() -> Result<Option<metrics_exporter_prometheus::PrometheusHandle>> {
+pub fn init_observability() -> Result<Observability> {
     // Get configuration from environment variables
     let service_name = std::env::var("SERVICE_NAME").unwrap_or_else(|_| "blog-backend".to_string());
     let service_version = std::env::var("SERVICE_VERSION").unwrap_or_else(|_| "0.1.0".to_string());
@@ -35,10 +40,12 @@ pub fn init_observability() -> Result<Option<metrics_exporter_prometheus::Promet
     );
 
     // Create resource describing this service
-    let resource = Resource::new(vec![
-        SERVICE_NAME.string(service_name.clone()),
-        SERVICE_VERSION.string(service_version.clone()),
-    ]);
+    let resource = Resource::builder_empty()
+        .with_attributes([
+            KeyValue::new(SERVICE_NAME, service_name.clone()),
+            KeyValue::new(SERVICE_VERSION, service_version.clone()),
+        ])
+        .build();
 
     // Initialize metrics
     let prometheus_handle = if enable_prometheus {
@@ -57,8 +64,8 @@ pub fn init_observability() -> Result<Option<metrics_exporter_prometheus::Promet
     let registry = tracing_subscriber::registry().with(env_filter);
 
     // Initialize OTLP tracing if endpoint is configured
-    if !otlp_endpoint.is_empty() && otlp_endpoint != "disabled" {
-        let tracer = init_tracer(&otlp_endpoint, resource.clone())?;
+    let tracer_provider = if !otlp_endpoint.is_empty() && otlp_endpoint != "disabled" {
+        let (tracer, provider) = init_tracer(&otlp_endpoint, resource.clone())?;
         info!("OTLP tracer initialized for endpoint: {}", otlp_endpoint);
 
         // Add OpenTelemetry layer
@@ -90,6 +97,7 @@ pub fn init_observability() -> Result<Option<metrics_exporter_prometheus::Promet
                 )
                 .init();
         }
+        Some(provider)
     } else {
         // No OpenTelemetry, just regular logging
         if log_format.to_lowercase() == "json" {
@@ -115,24 +123,28 @@ pub fn init_observability() -> Result<Option<metrics_exporter_prometheus::Promet
                 )
                 .init();
         }
-    }
+        None
+    };
 
     info!("Observability stack initialized successfully");
-    Ok(prometheus_handle)
+    Ok(Observability {
+        prometheus_handle,
+        tracer_provider,
+    })
 }
 
-fn init_tracer(otlp_endpoint: &str, resource: Resource) -> Result<Tracer> {
-    let tracer = opentelemetry_otlp::new_pipeline()
-        .tracing()
-        .with_exporter(
-            opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint(otlp_endpoint),
-        )
-        .with_trace_config(trace::config().with_resource(resource))
-        .install_batch(opentelemetry_sdk::runtime::Tokio)?;
+fn init_tracer(otlp_endpoint: &str, resource: Resource) -> Result<(SdkTracer, SdkTracerProvider)> {
+    let exporter = opentelemetry_otlp::SpanExporter::builder()
+        .with_tonic()
+        .with_endpoint(otlp_endpoint)
+        .build()?;
+    let provider = SdkTracerProvider::builder()
+        .with_resource(resource)
+        .with_batch_exporter(exporter)
+        .build();
+    let tracer = provider.tracer("blog-backend");
 
-    Ok(tracer)
+    Ok((tracer, provider))
 }
 
 pub fn init_prometheus_metrics() -> Result<metrics_exporter_prometheus::PrometheusHandle> {
@@ -151,8 +163,9 @@ fn init_otlp_metrics(_otlp_endpoint: &str, _resource: Resource) -> Result<()> {
 }
 
 /// Shutdown observability providers gracefully
-pub fn shutdown_observability() {
+pub fn shutdown_observability(observability: Observability) {
     info!("Shutting down observability providers");
-    global::shutdown_tracer_provider();
-    // Note: metrics providers don't have a global shutdown in the current version
+    if let Some(provider) = observability.tracer_provider {
+        let _ = provider.shutdown();
+    }
 }
