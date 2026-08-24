@@ -1,7 +1,7 @@
 ---
 title: "SQLx caches prepared statements per connection"
 date: 2026-08-24T11:39:24+02:00
-draft: true
+draft: false
 authors: ["Maciej Flak"]
 description:
     SQLx prepares and caches every query you run, transparently, in an LRU that belongs to the connection rather than the pool. This post traces the Postgres wire protocol with bpftrace to watch what is happening under the hood.
