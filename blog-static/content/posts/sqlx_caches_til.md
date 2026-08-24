@@ -8,9 +8,9 @@ description:
 tags: ["rust", "sqlx", "postgres", "bpftrace", "performance"]
 ---
 
-Today I learned that [`sqlx::query()`](https://docs.rs/sqlx/latest/sqlx/fn.query.html) prepares and caches sql statements transparently. The cache belongs to each *connection*, so a pool does not have one shared statement cache — it has one per connection. With `max_connections: 40`, a statement that is warm on one connection is cold on the other 39.
+Today I learned that [`sqlx::query()`](https://docs.rs/sqlx/latest/sqlx/fn.query.html) prepares and caches SQL statements transparently. The cache belongs to each *connection*. A pool doesn't have one shared cache. It has one per connection. With `max_connections: 40`, a statement warm on one connection is still cold on the other 39.
 
-Caching is on by default, and for PostgreSQL each connection keeps up to 100 distinct statements in an LRU keyed by the SQL text. The capacity is configurable:
+Caching is on by default. With PostgreSQL, each connection keeps up to 100 statements in an LRU keyed by the SQL text. The capacity is configurable:
 
 ```rust
 use sqlx::postgres::{PgConnectOptions, PgPool};
@@ -19,11 +19,11 @@ let options: PgConnectOptions = database_url.parse()?;
 let pool = PgPool::connect_with(options.statement_cache_capacity(32)).await?;
 ```
 
-That is all documented. What I actually wanted to do was to observe that behavior.
+That part is documented. I wanted to see it happen.
 
 ## Watching it happen
 
-A Postgres container, a couple-line loop, and bpftrace on the socket syscalls:
+All I needed was a Postgres container, a small loop, and bpftrace on the socket syscalls:
 
 ```bash
 docker run -d --name pgcache-lab -e POSTGRES_PASSWORD=lab -e POSTGRES_DB=lab \
@@ -34,7 +34,7 @@ cargo add sqlx --no-default-features --features postgres,runtime-tokio,tls-none
 cargo add tokio --features macros,rt-multi-thread
 ```
 
-The `iter_mark` function exists only to give bpftrace a clean symbol to hang a uprobe on, so the trace output is delimited per call:
+I added `iter_mark` only to give bpftrace a clean symbol for a uprobe. It separates the trace output by call:
 
 ```rust
 use sqlx::{Connection, PgConnection, Row};
@@ -73,15 +73,15 @@ async fn main() -> Result<(), sqlx::Error> {
 }
 ```
 
-I built the lab with Rust's v0 symbol mangling so the readable suffixes used by the uprobes are stable across rebuilds:
+I built the lab with Rust's v0 symbol mangling. This keeps the readable suffixes used by the uprobes stable across rebuilds:
 
 ```bash
 RUSTFLAGS="-C symbol-mangling-version=v0" cargo build
 ```
 
-A single `PgConnection`, not a pool — the cache is per connection, and a pool would scatter the observations.
+I used one `PgConnection`, not a pool. Otherwise, the pool would scatter the observations across several caches.
 
-Postgres frontend messages are self-identifying by their first byte (`P` = Parse, `B` = Bind), and sqlx batches each flush into one syscall. So the first byte of every send *is* the hit-or-miss signal — no need to guess from timing. A uprobe on `get_or_prepare` adds the SQL text for both paths:
+Postgres frontend messages identify themselves with their first byte (`P` = Parse, `B` = Bind). SQLx batches each flush into one syscall. That makes the first byte of every send the hit-or-miss signal. No guessing from timing. A uprobe on `get_or_prepare` adds the SQL text:
 
 ```awk
 // statement-cache trace: one arrow per round trip
@@ -107,12 +107,14 @@ tracepoint:syscalls:sys_enter_sendto /pid == cpid/ {
 
 Four probes, each answering a different question:
 
-- **`iter_mark`** is a marker function I put in the program purely to delimit the output. An empty `extern "C"` function with `#[unsafe(no_mangle)]` and `#[inline(never)]` gives a stable, unmangled symbol whose arguments land in `arg0`/`arg1` — so passing the loop index and `cached_statements_size()` labels every line that follows and prints the cache occupancy without a debugger.
+- **`iter_mark`** separates the output. An empty `extern "C"` function with `#[unsafe(no_mangle)]` and `#[inline(never)]` gives me a stable symbol. Its arguments land in `arg0`/`arg1`, so I pass the loop index and `cached_statements_size()` to label each call without a debugger.
 - **`PgConnection::get_or_prepare`** sees every parameterized query before the cache lookup. In this build the returned future occupies the first ABI argument, followed by the connection and the `&str` pointer-length pair in `arg2`/`arg3`.
-- **`executor::prepare`** is sqlx's own function, and sqlx calls it *only on a miss*. Its presence directly below a query line classifies that lookup as cold. The `"*executor7prepare"` glob is doing real work here — see below.
+- **`executor::prepare`** is SQLx's own function. SQLx calls it *only on a miss*. When it appears below a query, that lookup was cold. The `"*executor7prepare"` glob is doing real work here. More on that below.
 - **`sys_enter_sendto`** is the wire. Byte 80 is `P` (Parse), byte 66 is `B` (Bind); the statement name sits a few bytes in, at offset 5 for Parse and 6 for Bind, because Bind carries an empty portal name first.
 
-Two details worth copying. `/pid == cpid/` scopes everything to the process launched by `-c`; the obvious-looking `comm == "pgcache"` is a trap, because tokio renames its worker threads and I/O on a worker would be missed, whereas bpftrace's `pid` is the thread group id and catches every thread. And there is no `END` block — bpftrace auto-prints `@parse` and `@bind` on exit, which is both shorter and avoids the double-printing you get by calling `print()` yourself.
+Two details are worth copying. `/pid == cpid/` limits the trace to the process launched by `-c`. The obvious `comm == "pgcache"` is a trap. Tokio renames its worker threads, so it would miss I/O from a worker. bpftrace's `pid` is the thread group ID, which catches them all.
+
+There is no `END` block either. bpftrace prints `@parse` and `@bind` on exit. Calling `print()` myself would only print them twice.
 
 ### Where `*executor7prepare` comes from
 
@@ -122,19 +124,19 @@ Two details worth copying. `/pid == cpid/` scopes everything to the process laun
 _RNvNtNtCshtbpjjQYzMb_13sqlx_postgres10connection8executor7prepare
 ```
 
-Which looks unusable until you notice it is not really obfuscated. Rust's v0 mangling writes a path as a sequence of length-prefixed components, so the readable path is sitting right there in plain text: `13sqlx_postgres`, `10connection`, `8executor`, `7prepare` — each name preceded by its own length. That makes the symbol greppable without a demangler:
+It looks unusable, but it isn't really obfuscated. Rust's v0 mangling writes a path as length-prefixed components. The readable path is right there: `13sqlx_postgres`, `10connection`, `8executor`, `7prepare`. Each name starts with its length. That makes the symbol greppable without a demangler:
 
 ```bash
 nm target/debug/pgcache | grep -oP '_R\S*executor7prepare$'
 ```
 
-The `Cshtbpjj...` in the middle is the crate disambiguator, a hash of the compilation. It changes whenever the crate is rebuilt, which is what makes hardcoding the full symbol a bad idea. But since it sits *before* the part we care about, an anchored glob skips it entirely — and bpftrace accepts globs in the symbol position:
+The `Cshtbpjj...` part is the crate disambiguator, a hash of the compilation. It changes whenever the crate is rebuilt, so hardcoding the full symbol is a bad idea. Luckily, it sits *before* the part I care about. An anchored glob skips it, and bpftrace accepts globs in the symbol position:
 
 ```
 uprobe:/tmp/pgcache/target/debug/pgcache:"*executor7prepare"
 ```
 
-That attaches exactly one probe. It has to be anchored at the end, because `*prepare*` unanchored would also catch `prepare::{closure#0}` (the async body), its drop glue, and hashbrown's `prepare_resize`, and you would silently count each miss several times. Check the count in the `Attached N probes` line: if it is not the number you expect, the glob is too loose.
+That attaches exactly one probe. The end anchor matters. A loose `*prepare*` would also catch `prepare::{closure#0}` (the async body), its drop glue, and hashbrown's `prepare_resize`. Each miss would quietly get counted several times. Check the `Attached N probes` line. If the number is wrong, the glob is too loose.
 
 The same trick gets the cache itself, for counting lookups rather than misses:
 
@@ -179,9 +181,11 @@ client cache=3 server=["sqlx_s_1", "sqlx_s_2", "sqlx_s_3"]
 @parse: 3
 ```
 
-Because the protocol here is strictly request then response, every arrow is one round trip. Call 0 is cold and pays two, `Parse` then `Bind`. Calls 1, 3 and 4 pay one — `Bind` alone against a statement the server already holds.
+The protocol here is strictly request then response, so every arrow is one round trip. Call 0 is cold and pays for two: `Parse`, then `Bind`. Calls 1, 3 and 4 pay for one. They only send `Bind` against a statement the server already holds.
 
-Call 2 is the one worth staring at. The only difference is a single extra placeholder in the `IN` list, and that is enough to make it a different cache key, a second `Parse`, and a second server-side statement. Call 3 then goes straight back to `sqlx_s_1`, undisturbed by the miss in between. The tail — six `Bind` against three `Parse` — is the whole thing in two numbers: `@bind` counts what you asked for, `@parse` counts what it cost.
+Call 2 is the interesting one. The only difference is one extra placeholder in the `IN` list. That is enough for a new cache key, another `Parse`, and another server-side statement. Call 3 goes straight back to `sqlx_s_1`.
+
+The final numbers tell the whole story: six `Bind` messages and three `Parse` messages. `@bind` counts what I asked for. `@parse` counts what it cost.
 
 | Call | Messages | Round trips |
 |---|---|---|
@@ -200,7 +204,7 @@ SELECT name, statement FROM pg_prepared_statements;
 
 ## Why any of this matters
 
-Call 2 above is a two-element toy, but it is the whole problem in miniature. A query built with a variable-length `IN` list — the shape you get from `QueryBuilder::push_tuples` over a `Vec` of ids — produces a different SQL string, and so a different cache key, for every distinct length:
+Call 2 is a tiny example of a real problem. A query with a variable-length `IN` list, like one built with `QueryBuilder::push_tuples` over a `Vec` of IDs, produces different SQL for every length. Each string gets its own cache key:
 
 ```rust
 // 300 distinct lengths -> 300 distinct cache keys -> a miss almost every call
@@ -208,11 +212,11 @@ let placeholders: Vec<String> = (2..2 + n).map(|p| format!("${p}::int")).collect
 let sql = format!("SELECT $1::int WHERE $1::int IN ({})", placeholders.join(","));
 ```
 
-Every novel length costs the extra round trip, and once past the 100-entry capacity each insert also evicts a neighbour — and on Postgres that eviction is itself a blocking round trip, since sqlx waits for `CloseComplete`. Binding a single array parameter, or filtering in Rust, keeps one static statement that stays warm.
+Every new length costs an extra round trip. Once the cache has 100 entries, each insert also evicts a neighbour. On Postgres, that eviction is another blocking round trip because SQLx waits for `CloseComplete`. Binding one array parameter, or filtering in Rust, keeps one static statement warm.
 
 ## Watching from PostgreSQL
 
-The Debian image used above includes PostgreSQL's USDT probes, while the Alpine image does not. PostgreSQL's `statement__status` probe supplies the SQL text on Bind and Execute, so it can be correlated by backend PID with parse, plan, and execute probes:
+The Debian image includes PostgreSQL's USDT probes. The Alpine image doesn't. PostgreSQL's `statement__status` probe gives me the SQL text on Bind and Execute. I can correlate it by backend PID with the parse, plan, and execute probes:
 
 ```bash
 PG_BIN="/proc/$(docker inspect -f '{{.State.Pid}}' pgcache-lab)/root/usr/lib/postgresql/16/bin/postgres"
@@ -276,7 +280,7 @@ END {
 }"
 ```
 
-`uptr(arg0)` tells bpftrace that PostgreSQL's USDT argument points into userspace. On current bpftrace, `delete` returns the removed value, so assigning it to `$removed` avoids a discarded-value warning.
+`uptr(arg0)` tells bpftrace that PostgreSQL's USDT argument points into userspace. Current bpftrace returns the removed value from `delete`, so I assign it to `$removed` to avoid a warning.
 
 ```console
 Attached 8 probes
@@ -311,7 +315,7 @@ execute pid=1138669 cache=miss sql=SELECT name FROM pg_prepared_statements ORDER
 done    pid=1138669 duration_us=950
 ```
 
-The five loop iterations produce two misses and three hits. The final `pg_prepared_statements` query adds one more miss. This server-side view confirms the same cache behavior without depending on sqlx's private symbols.
+The five loop iterations give me two misses and three hits. The final `pg_prepared_statements` query adds one more miss. Same cache behavior, this time without touching SQLx's private symbols.
 
 ## Notes for reproducing this
 
