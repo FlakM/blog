@@ -65,13 +65,15 @@ async fn main() -> Result<(), Error> {
         fediverse_domain.clone(),
         fediverse_username,
     );
-    fediverse_repository.ensure_local_actor().await?;
+    let local_actor = fediverse_repository.ensure_local_actor().await?;
     fediverse_repository.backfill_discussion_links().await?;
     let mastodon_resolver = fediverse::MastodonResolver::from_env();
     let fediverse_config = FederationConfig::builder()
         .domain(fediverse_domain)
         .app_data(fediverse_repository.clone())
         .debug(std::env::var("FEDIVERSE_DEBUG").is_ok_and(|value| value == "true"))
+        .http_signature_compat(true)
+        .signed_fetch_actor(&local_actor)
         .build()
         .await?;
     if let Some(resolver) = mastodon_resolver.clone() {

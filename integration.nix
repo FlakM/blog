@@ -161,6 +161,7 @@ in
           };
           extraConfig = {
             ALLOWED_PRIVATE_ADDRESSES = "192.168.2.0/24";
+            AUTHORIZED_FETCH = "true";
             EMAIL_DOMAIN_ALLOWLIST = "example.com";
           };
         };
@@ -234,7 +235,7 @@ in
         "curl -fsS 'https://mastodon.local/.well-known/webfinger?resource=acct:alice@mastodon.local'"
     ))
     mastodon_actor_url = next(link["href"] for link in mastodon_webfinger["links"] if link["rel"] == "self")
-    server.succeed("curl -fsS -H 'Accept: application/activity+json' " + mastodon_actor_url)
+    server.fail("curl -fsS -H 'Accept: application/activity+json' " + mastodon_actor_url)
     webfinger = json.loads(client.succeed(
         "curl -fsS 'https://blog.local/.well-known/webfinger?resource=acct:blog@blog.local'"
     ))
