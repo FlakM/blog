@@ -247,3 +247,14 @@ resource "cloudflare_page_rule" "flakm_root" {
     cache_level = "cache_everything"
   }
 }
+
+resource "cloudflare_page_rule" "flakm_root_api" {
+  zone_id  = var.ZONE_ID
+  target   = "https://flakm.com/api/*"
+  priority = 2
+  status   = "active"
+
+  actions = {
+    cache_level = "bypass"
+  }
+}
