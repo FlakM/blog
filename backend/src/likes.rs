@@ -15,7 +15,21 @@ use tracing::{info, instrument, warn};
 pub struct LikeResponse {
     pub success: bool,
     pub message: String,
+    pub local_likes: i64,
+    pub fediverse_likes: i64,
     pub total_likes: i64,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+struct LikeCounts {
+    local_likes: i64,
+    fediverse_likes: i64,
+}
+
+impl LikeCounts {
+    fn total(&self) -> i64 {
+        self.local_likes + self.fediverse_likes
+    }
 }
 
 #[allow(dead_code)]
@@ -91,6 +105,8 @@ pub async fn like_post(
         return Ok(Json(LikeResponse {
             success: false,
             message: "Blog post not found".to_string(),
+            local_likes: 0,
+            fediverse_likes: 0,
             total_likes: 0,
         }));
     }
@@ -124,10 +140,18 @@ pub async fn like_post(
             counter!("blog_likes_rate_limited_total").increment(1);
             histogram!("blog_likes_request_duration_ms", "endpoint" => "like_post", "status" => "rate_limited")
                 .record(start_time.elapsed().as_millis() as f64);
+            let counts = get_like_counts(&pool, &post_slug)
+                .await
+                .unwrap_or(LikeCounts {
+                    local_likes: 0,
+                    fediverse_likes: 0,
+                });
             return Ok(Json(LikeResponse {
                 success: false,
                 message: "You can only like a post once per hour".to_string(),
-                total_likes: get_like_count(&pool, &post_slug).await.unwrap_or(0),
+                total_likes: counts.total(),
+                local_likes: counts.local_likes,
+                fediverse_likes: counts.fediverse_likes,
             }));
         }
         Err(e) => {
@@ -140,7 +164,13 @@ pub async fn like_post(
     }
 
     // Get the total like count for this post
-    let total_likes = get_like_count(&pool, &post_slug).await.unwrap_or(0);
+    let counts = get_like_counts(&pool, &post_slug)
+        .await
+        .unwrap_or(LikeCounts {
+            local_likes: 0,
+            fediverse_likes: 0,
+        });
+    let total_likes = counts.total();
 
     // Update metrics
     gauge!("blog_post_likes_total", "post_slug" => post_slug.clone()).set(total_likes as f64);
@@ -150,6 +180,8 @@ pub async fn like_post(
     Ok(Json(LikeResponse {
         success: true,
         message: "Like recorded successfully".to_string(),
+        local_likes: counts.local_likes,
+        fediverse_likes: counts.fediverse_likes,
         total_likes,
     }))
 }
@@ -170,7 +202,7 @@ pub async fn get_likes(
         "Retrieving like count"
     );
 
-    let total_likes = get_like_count(&pool, &post_slug).await.map_err(|e| {
+    let counts = get_like_counts(&pool, &post_slug).await.map_err(|e| {
         warn!(
             error = %e,
             post_slug = %post_slug,
@@ -183,6 +215,7 @@ pub async fn get_likes(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
+    let total_likes = counts.total();
     info!(
         post_slug = %post_slug,
         total_likes = %total_likes,
@@ -196,27 +229,27 @@ pub async fn get_likes(
     Ok(Json(LikeResponse {
         success: true,
         message: "Like count retrieved successfully".to_string(),
+        local_likes: counts.local_likes,
+        fediverse_likes: counts.fediverse_likes,
         total_likes,
     }))
 }
 
 #[instrument(skip(pool))]
-async fn get_like_count(pool: &PgPool, post_slug: &str) -> Result<i64, sqlx::Error> {
+async fn get_like_counts(pool: &PgPool, post_slug: &str) -> Result<LikeCounts, sqlx::Error> {
     let start_time = std::time::Instant::now();
 
-    let result = sqlx::query!(
-        "SELECT COUNT(*) as count FROM blog_post_likes WHERE post_slug = $1",
-        post_slug
+    let counts = sqlx::query_as::<_, LikeCounts>(
+        "SELECT (SELECT COUNT(*) FROM blog_post_likes WHERE post_slug = $1) AS local_likes, (SELECT COUNT(*) FROM fediverse_reactions WHERE post_slug = $1 AND kind = 'Like') AS fediverse_likes",
     )
+    .bind(post_slug)
     .fetch_one(pool)
     .await?;
-
-    let count: i64 = result.count.unwrap_or(0);
 
     histogram!("blog_database_query_duration_ms", "query" => "get_like_count")
         .record(start_time.elapsed().as_millis() as f64);
 
-    Ok(count)
+    Ok(counts)
 }
 
 fn extract_user_ip(headers: &HeaderMap) -> String {

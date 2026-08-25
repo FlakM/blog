@@ -340,6 +340,98 @@ in
         status_search_command + " | jq -e '.statuses[] | select(.uri == \"https://blog.local/blog/posts/sqlx_caches_til\")'",
         timeout=60,
     ))
+    status_id = resolved_status["id"]
+
+    client.succeed(
+        "curl -fsS -X POST -H '" + authorization + "' "
+        "https://mastodon.local/api/v1/statuses/" + status_id + "/favourite"
+    )
+    client.wait_until_succeeds(
+        "curl -fsS https://blog.local/api/likes/sqlx_caches_til "
+        "| jq -e '.local_likes == 0 and .fediverse_likes == 1 and .total_likes == 1'",
+        timeout=60,
+    )
+    server.succeed(
+        "sudo -u postgres psql blog -tAc \"SELECT count(*) FROM fediverse_reactions WHERE post_slug = 'sqlx_caches_til' AND kind = 'Like'\" | grep -qx 1"
+    )
+    client.succeed(
+        "curl -fsS -X POST -H '" + authorization + "' "
+        "https://mastodon.local/api/v1/statuses/" + status_id + "/unfavourite"
+    )
+    client.wait_until_succeeds(
+        "curl -fsS https://blog.local/api/likes/sqlx_caches_til | jq -e '.fediverse_likes == 0 and .total_likes == 0'",
+        timeout=60,
+    )
+
+    client.succeed(
+        "curl -fsS -X POST -H '" + authorization + "' "
+        "https://mastodon.local/api/v1/statuses/" + status_id + "/reblog"
+    )
+    client.wait_until_succeeds(
+        "curl -fsS https://blog.local/api/discussions/sqlx_caches_til | jq -e '.boosts == 1'",
+        timeout=60,
+    )
+    client.succeed(
+        "curl -fsS -X POST -H '" + authorization + "' "
+        "https://mastodon.local/api/v1/statuses/" + status_id + "/unreblog"
+    )
+    client.wait_until_succeeds(
+        "curl -fsS https://blog.local/api/discussions/sqlx_caches_til | jq -e '.boosts == 0'",
+        timeout=60,
+    )
+
+    reply = json.loads(client.succeed(
+        "curl -fsS -X POST -H '" + authorization + "' "
+        "--data-urlencode 'status=Reply from integration test' "
+        "--data 'in_reply_to_id=" + status_id + "' https://mastodon.local/api/v1/statuses"
+    ))
+    reply_id = reply["id"]
+    client.wait_until_succeeds(
+        "curl -fsS https://blog.local/api/discussions/sqlx_caches_til | jq -e '.replies == 1'",
+        timeout=60,
+    )
+    server.succeed(
+        "sudo -u postgres psql blog -tAc \"SELECT content LIKE '%Reply from integration test%' FROM fediverse_replies WHERE deleted_at IS NULL\" | grep -qx t"
+    )
+    client.succeed(
+        "curl -fsS -X PUT -H '" + authorization + "' "
+        "--data-urlencode 'status=@blog@blog.local Updated reply from integration test' "
+        "https://mastodon.local/api/v1/statuses/" + reply_id
+    )
+    server.wait_until_succeeds(
+        "sudo -u postgres psql blog -tAc \"SELECT content LIKE '%Updated reply from integration test%' AND updated_at IS NOT NULL FROM fediverse_replies WHERE deleted_at IS NULL\" | grep -qx t",
+        timeout=60,
+    )
+    client.succeed(
+        "curl -fsS -X DELETE -H '" + authorization + "' "
+        "https://mastodon.local/api/v1/statuses/" + reply_id
+    )
+    client.wait_until_succeeds(
+        "curl -fsS https://blog.local/api/discussions/sqlx_caches_til | jq -e '.replies == 0'",
+        timeout=60,
+    )
+    server.succeed(
+        "sudo -u postgres psql blog -tAc 'SELECT count(*) FROM fediverse_replies WHERE deleted_at IS NOT NULL' | grep -qx 1"
+    )
+
+    private_reply = json.loads(client.succeed(
+        "curl -fsS -X POST -H '" + authorization + "' "
+        "--data-urlencode 'status=@blog@blog.local Private reply from integration test' "
+        "--data 'visibility=direct' --data 'in_reply_to_id=" + status_id + "' "
+        "https://mastodon.local/api/v1/statuses"
+    ))
+    server.wait_until_succeeds(
+        "sudo -u postgres psql blog -tAc \"SELECT count(*) FROM fediverse_received_activities WHERE activity_type = 'Create'\" | grep -qx 2",
+        timeout=60,
+    )
+    server.fail(
+        "sudo -u postgres psql blog -tAc \"SELECT content FROM fediverse_replies WHERE content LIKE '%Private reply from integration test%'\" | grep -q ."
+    )
+    client.succeed(
+        "curl -fsS -X DELETE -H '" + authorization + "' "
+        "https://mastodon.local/api/v1/statuses/" + private_reply["id"]
+    )
+
     interaction_url = (
         "https://mastodon.local/authorize_interaction?uri="
         "https%3A%2F%2Fblog.local%2Fblog%2Fposts%2Fsqlx_caches_til"

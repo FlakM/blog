@@ -11,7 +11,14 @@
   data-discussion-slug="{{ $slug }}"
 >
   <h2 id="discussion-heading-{{ $slug }}" class="font-mono text-xs font-bold uppercase tracking-[0.16em] text-accent">Discuss this post</h2>
-  <p class="mt-2 text-sm leading-relaxed text-muted">Read responses and join the conversation elsewhere.</p>
+  <p class="mt-2 text-sm leading-relaxed text-muted">
+    Read responses and join the conversation elsewhere.
+    <span class="hidden" data-fediverse-activity>
+      <span data-reply-count>0 replies</span>
+      <span aria-hidden="true"> · </span>
+      <span data-boost-count>0 boosts</span>
+    </span>
+  </p>
   <ul class="mt-4 flex flex-wrap gap-3" id="discussion-links-{{ $slug }}" role="list" aria-live="polite">
     {{ range $link := $links }}
       {{ with $link.url }}

@@ -21,15 +21,18 @@ use activitypub_federation::{
     traits::{Activity, Actor, Object},
 };
 use axum::{
-    extract::{Path, Query},
+    body::{to_bytes, Body},
+    extract::{FromRequest, Path, Query, Request},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, PgPool};
+use sha2::{Digest, Sha256};
+use sqlx::{FromRow, PgPool, Postgres, Transaction};
 use std::{collections::HashSet, fmt::Debug, fs, time::Duration};
 use url::Url;
 use uuid::Uuid;
@@ -334,7 +337,197 @@ impl FediverseRepository {
         .await?
         .into_iter()
         .map(TryInto::try_into)
-        .collect()
+            .collect()
+    }
+
+    async fn published_post_slug(&self, object: &Url) -> Result<Option<String>, Error> {
+        let actor = self.actor_url()?;
+        let prefix = format!("{}/posts/", actor.as_str().trim_end_matches('/'));
+        let Some(slug) = object.as_str().strip_prefix(&prefix) else {
+            return Ok(None);
+        };
+        if slug.is_empty() || slug.contains('/') || actor_post_url(&actor, slug)? != *object {
+            return Ok(None);
+        }
+        Ok(
+            sqlx::query_scalar("SELECT slug FROM fediverse_published_posts WHERE slug = $1")
+                .bind(slug)
+                .fetch_optional(&self.pool)
+                .await?,
+        )
+    }
+
+    async fn record_received(
+        transaction: &mut Transaction<'_, Postgres>,
+        activity_id: &Url,
+        actor_id: &Url,
+        activity_type: &str,
+    ) -> Result<bool, Error> {
+        let result = sqlx::query(
+            "INSERT INTO fediverse_received_activities (activity_id, actor_id, activity_type) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+        )
+        .bind(activity_id.as_str())
+        .bind(actor_id.as_str())
+        .bind(activity_type)
+        .execute(&mut **transaction)
+        .await?;
+        Ok(result.rows_affected() == 1)
+    }
+
+    async fn record_reaction(
+        &self,
+        activity_id: &Url,
+        actor_id: &Url,
+        object_id: &Url,
+        kind: &str,
+    ) -> Result<(), Error> {
+        let slug = self
+            .published_post_slug(object_id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("reaction does not target a published local post"))?;
+        let mut transaction = self.pool.begin().await?;
+        if !Self::record_received(&mut transaction, activity_id, actor_id, kind).await? {
+            return Ok(());
+        }
+        sqlx::query(
+            "INSERT INTO fediverse_reactions (activity_id, post_slug, actor_id, kind, object_id) SELECT $1, $2, $3, $4, $5 WHERE NOT EXISTS (SELECT 1 FROM fediverse_undone_activities WHERE activity_id = $1 AND actor_id = $3) ON CONFLICT (post_slug, actor_id, kind) DO UPDATE SET activity_id = EXCLUDED.activity_id, object_id = EXCLUDED.object_id, created_at = NOW()",
+        )
+        .bind(activity_id.as_str())
+        .bind(slug)
+        .bind(actor_id.as_str())
+        .bind(kind)
+        .bind(object_id.as_str())
+        .execute(&mut *transaction)
+        .await?;
+        transaction.commit().await?;
+        Ok(())
+    }
+
+    async fn undo_reaction(
+        &self,
+        undo_id: &Url,
+        actor_id: &Url,
+        reaction_id: &Url,
+        kind: Option<&str>,
+    ) -> Result<(), Error> {
+        let mut transaction = self.pool.begin().await?;
+        if !Self::record_received(&mut transaction, undo_id, actor_id, "Undo").await? {
+            return Ok(());
+        }
+        sqlx::query(
+            "INSERT INTO fediverse_undone_activities (activity_id, actor_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+        )
+        .bind(reaction_id.as_str())
+        .bind(actor_id.as_str())
+        .execute(&mut *transaction)
+        .await?;
+        sqlx::query(
+            "DELETE FROM fediverse_reactions WHERE activity_id = $1 AND actor_id = $2 AND ($3::VARCHAR IS NULL OR kind = $3)",
+        )
+        .bind(reaction_id.as_str())
+        .bind(actor_id.as_str())
+        .bind(kind)
+        .execute(&mut *transaction)
+        .await?;
+        transaction.commit().await?;
+        Ok(())
+    }
+
+    async fn record_reply(
+        &self,
+        activity_id: &Url,
+        actor_id: &Url,
+        note: &RemoteNote,
+    ) -> Result<(), Error> {
+        let slug = self
+            .published_post_slug(&note.in_reply_to)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("reply does not target a published local post"))?;
+        let mut transaction = self.pool.begin().await?;
+        if !Self::record_received(&mut transaction, activity_id, actor_id, "Create").await? {
+            return Ok(());
+        }
+        sqlx::query(
+            "INSERT INTO fediverse_replies (object_id, create_activity_id, post_slug, actor_id, url, content, published_at) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (object_id) DO NOTHING",
+        )
+        .bind(note.id.as_str())
+        .bind(activity_id.as_str())
+        .bind(slug)
+        .bind(actor_id.as_str())
+        .bind(note.url.as_ref().unwrap_or(&note.id).as_str())
+        .bind(&note.content)
+        .bind(note.published.unwrap_or_else(Utc::now))
+        .execute(&mut *transaction)
+        .await?;
+        transaction.commit().await?;
+        Ok(())
+    }
+
+    async fn reply_owner(&self, object_id: &Url) -> Result<Option<String>, Error> {
+        Ok(
+            sqlx::query_scalar("SELECT actor_id FROM fediverse_replies WHERE object_id = $1")
+                .bind(object_id.as_str())
+                .fetch_optional(&self.pool)
+                .await?,
+        )
+    }
+
+    async fn update_reply(
+        &self,
+        activity_id: &Url,
+        actor_id: &Url,
+        note: &RemoteNote,
+    ) -> Result<(), Error> {
+        let mut transaction = self.pool.begin().await?;
+        if !Self::record_received(&mut transaction, activity_id, actor_id, "Update").await? {
+            return Ok(());
+        }
+        sqlx::query(
+            "UPDATE fediverse_replies SET url = $3, content = $4, updated_at = $5 WHERE object_id = $1 AND actor_id = $2 AND deleted_at IS NULL AND (updated_at IS NULL OR updated_at < $5)",
+        )
+        .bind(note.id.as_str())
+        .bind(actor_id.as_str())
+        .bind(note.url.as_ref().unwrap_or(&note.id).as_str())
+        .bind(&note.content)
+        .bind(note.updated.unwrap_or_else(Utc::now))
+        .execute(&mut *transaction)
+        .await?;
+        transaction.commit().await?;
+        Ok(())
+    }
+
+    async fn delete_reply(
+        &self,
+        activity_id: &Url,
+        actor_id: &Url,
+        object_id: &Url,
+        activity_type: &str,
+    ) -> Result<(), Error> {
+        let mut transaction = self.pool.begin().await?;
+        if !Self::record_received(&mut transaction, activity_id, actor_id, activity_type).await? {
+            return Ok(());
+        }
+        sqlx::query(
+            "UPDATE fediverse_replies SET deleted_at = NOW() WHERE object_id = $1 AND actor_id = $2 AND deleted_at IS NULL",
+        )
+        .bind(object_id.as_str())
+        .bind(actor_id.as_str())
+        .execute(&mut *transaction)
+        .await?;
+        transaction.commit().await?;
+        Ok(())
+    }
+
+    async fn record_unsupported(
+        &self,
+        activity_id: &Url,
+        actor_id: &Url,
+        kind: &str,
+    ) -> Result<(), Error> {
+        let mut transaction = self.pool.begin().await?;
+        Self::record_received(&mut transaction, activity_id, actor_id, kind).await?;
+        transaction.commit().await?;
+        Ok(())
     }
 }
 
@@ -521,21 +714,153 @@ struct Follow {
     id: Url,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct UndoFollow {
+struct RemoteNote {
+    #[serde(rename = "type")]
+    kind: String,
+    id: Url,
+    attributed_to: ObjectId<FediverseActor>,
+    in_reply_to: Url,
+    #[serde(default, deserialize_with = "deserialize_one_or_many")]
+    to: Vec<Url>,
+    #[serde(default, deserialize_with = "deserialize_one_or_many")]
+    cc: Vec<Url>,
+    content: String,
+    #[serde(default)]
+    url: Option<Url>,
+    #[serde(default)]
+    published: Option<DateTime<Utc>>,
+    #[serde(default)]
+    updated: Option<DateTime<Utc>>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct DeletedObject {
+    id: Url,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+enum DeleteTarget {
+    Object(DeletedObject),
+    Id(Url),
+}
+
+impl DeleteTarget {
+    fn id(&self) -> &Url {
+        match self {
+            Self::Object(object) => &object.id,
+            Self::Id(id) => id,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(tag = "type")]
+enum UndoObject {
+    Follow {
+        actor: ObjectId<FediverseActor>,
+        object: ObjectId<FediverseActor>,
+    },
+    Like {
+        actor: ObjectId<FediverseActor>,
+        object: Url,
+        id: Url,
+    },
+    Announce {
+        actor: ObjectId<FediverseActor>,
+        object: Url,
+        id: Url,
+    },
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+enum UndoTarget {
+    Object(UndoObject),
+    Id(Url),
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type")]
+enum KnownActivity {
+    Follow {
+        actor: ObjectId<FediverseActor>,
+        object: ObjectId<FediverseActor>,
+        id: Url,
+    },
+    Undo {
+        actor: ObjectId<FediverseActor>,
+        object: UndoTarget,
+        id: Url,
+    },
+    Like {
+        actor: ObjectId<FediverseActor>,
+        object: Url,
+        id: Url,
+    },
+    Announce {
+        actor: ObjectId<FediverseActor>,
+        object: Url,
+        id: Url,
+    },
+    Create {
+        actor: ObjectId<FediverseActor>,
+        object: Box<RemoteNote>,
+        id: Url,
+    },
+    Update {
+        actor: ObjectId<FediverseActor>,
+        object: Box<RemoteNote>,
+        id: Url,
+    },
+    Delete {
+        actor: ObjectId<FediverseActor>,
+        object: DeleteTarget,
+        id: Url,
+    },
+}
+
+impl KnownActivity {
+    fn id(&self) -> &Url {
+        match self {
+            Self::Follow { id, .. }
+            | Self::Undo { id, .. }
+            | Self::Like { id, .. }
+            | Self::Announce { id, .. }
+            | Self::Create { id, .. }
+            | Self::Update { id, .. }
+            | Self::Delete { id, .. } => id,
+        }
+    }
+
+    fn actor(&self) -> &Url {
+        match self {
+            Self::Follow { actor, .. }
+            | Self::Undo { actor, .. }
+            | Self::Like { actor, .. }
+            | Self::Announce { actor, .. }
+            | Self::Create { actor, .. }
+            | Self::Update { actor, .. }
+            | Self::Delete { actor, .. } => actor.inner(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct UnsupportedActivity {
     actor: ObjectId<FediverseActor>,
-    object: Follow,
     #[serde(rename = "type")]
     kind: String,
     id: Url,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize)]
 #[serde(untagged)]
 enum AcceptedActivity {
-    Follow(Follow),
-    UndoFollow(UndoFollow),
+    Known(KnownActivity),
+    Unsupported(UnsupportedActivity),
 }
 
 #[async_trait::async_trait]
@@ -545,36 +870,85 @@ impl Activity for AcceptedActivity {
 
     fn id(&self) -> &Url {
         match self {
-            Self::Follow(activity) => &activity.id,
-            Self::UndoFollow(activity) => &activity.id,
+            Self::Known(activity) => activity.id(),
+            Self::Unsupported(activity) => &activity.id,
         }
     }
 
     fn actor(&self) -> &Url {
         match self {
-            Self::Follow(activity) => activity.actor.inner(),
-            Self::UndoFollow(activity) => activity.actor.inner(),
+            Self::Known(activity) => activity.actor(),
+            Self::Unsupported(activity) => activity.actor.inner(),
         }
     }
 
     async fn verify(&self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
         let local_actor = data.local_actor().await?;
         match self {
-            Self::Follow(activity) => {
-                if activity.kind != "Follow" || activity.object.inner() != local_actor.ap_id.inner()
-                {
+            Self::Known(KnownActivity::Follow { object, .. }) => {
+                if object.inner() != local_actor.ap_id.inner() {
                     return Err(anyhow::anyhow!("invalid Follow target").into());
                 }
             }
-            Self::UndoFollow(activity) => {
-                if activity.kind != "Undo"
-                    || activity.object.kind != "Follow"
-                    || activity.actor.inner() != activity.object.actor.inner()
-                    || activity.object.object.inner() != local_actor.ap_id.inner()
-                {
-                    return Err(anyhow::anyhow!("invalid Undo Follow target").into());
+            Self::Known(KnownActivity::Undo { actor, object, .. }) => match object {
+                UndoTarget::Object(UndoObject::Follow {
+                    actor: followed_by,
+                    object,
+                    ..
+                }) => {
+                    if actor.inner() != followed_by.inner()
+                        || object.inner() != local_actor.ap_id.inner()
+                    {
+                        return Err(anyhow::anyhow!("invalid Undo Follow target").into());
+                    }
+                }
+                UndoTarget::Object(UndoObject::Like {
+                    actor: liked_by,
+                    object,
+                    ..
+                })
+                | UndoTarget::Object(UndoObject::Announce {
+                    actor: liked_by,
+                    object,
+                    ..
+                }) => {
+                    if actor.inner() != liked_by.inner()
+                        || data.published_post_slug(object).await?.is_none()
+                    {
+                        return Err(anyhow::anyhow!("invalid Undo reaction target").into());
+                    }
+                }
+                UndoTarget::Id(_) => {}
+            },
+            Self::Known(KnownActivity::Like { object, .. })
+            | Self::Known(KnownActivity::Announce { object, .. }) => {
+                if data.published_post_slug(object).await?.is_none() {
+                    return Err(anyhow::anyhow!("invalid reaction target").into());
                 }
             }
+            Self::Known(KnownActivity::Create { actor, object, .. }) => {
+                verify_remote_note(actor.inner(), object, data, false).await?;
+            }
+            Self::Known(KnownActivity::Update { actor, object, .. }) => {
+                verify_remote_note(actor.inner(), object, data, true).await?;
+                if data
+                    .reply_owner(&object.id)
+                    .await?
+                    .is_some_and(|owner| owner != actor.inner().as_str())
+                {
+                    return Err(anyhow::anyhow!("cannot update another actor's reply").into());
+                }
+            }
+            Self::Known(KnownActivity::Delete { actor, object, .. }) => {
+                if data
+                    .reply_owner(object.id())
+                    .await?
+                    .is_some_and(|owner| owner != actor.inner().as_str())
+                {
+                    return Err(anyhow::anyhow!("cannot delete another actor's reply").into());
+                }
+            }
+            Self::Unsupported(_) => {}
         }
         Ok(())
     }
@@ -582,19 +956,102 @@ impl Activity for AcceptedActivity {
     async fn receive(self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
         let local_actor = data.local_actor().await?;
         match self {
-            Self::Follow(follow) => {
-                let follower = follow.actor.dereference(data).await?;
+            Self::Known(KnownActivity::Follow { actor, object, id }) => {
+                let follower = actor.dereference(data).await?;
+                let follow = Follow {
+                    actor: follower.ap_id.clone(),
+                    object,
+                    kind: "Follow".to_string(),
+                    id,
+                };
                 data.add_follower(&local_actor, &follower).await?;
                 send_accept(&local_actor, follow, &follower, data).await
             }
-            Self::UndoFollow(undo) => {
-                let follower = undo.actor.dereference(data).await?;
-                data.remove_follower(local_actor.ap_id.inner(), follower.ap_id.inner())
-                    .await?;
-                send_accept(&local_actor, undo.object, &follower, data).await
+            Self::Known(KnownActivity::Undo { actor, object, id }) => match object {
+                UndoTarget::Object(UndoObject::Follow { .. }) => {
+                    data.remove_follower(local_actor.ap_id.inner(), actor.inner())
+                        .await
+                }
+                UndoTarget::Object(UndoObject::Like {
+                    id: reaction_id, ..
+                }) => {
+                    data.undo_reaction(&id, actor.inner(), &reaction_id, Some("Like"))
+                        .await
+                }
+                UndoTarget::Object(UndoObject::Announce {
+                    id: reaction_id, ..
+                }) => {
+                    data.undo_reaction(&id, actor.inner(), &reaction_id, Some("Announce"))
+                        .await
+                }
+                UndoTarget::Id(reaction_id) => {
+                    data.undo_reaction(&id, actor.inner(), &reaction_id, None)
+                        .await
+                }
+            },
+            Self::Known(KnownActivity::Like { actor, object, id }) => {
+                data.record_reaction(&id, actor.inner(), &object, "Like")
+                    .await
+            }
+            Self::Known(KnownActivity::Announce { actor, object, id }) => {
+                data.record_reaction(&id, actor.inner(), &object, "Announce")
+                    .await
+            }
+            Self::Known(KnownActivity::Create { actor, object, id }) => {
+                if note_is_public(&object) {
+                    data.record_reply(&id, actor.inner(), &object).await
+                } else {
+                    data.record_unsupported(&id, actor.inner(), "Create").await
+                }
+            }
+            Self::Known(KnownActivity::Update { actor, object, id }) => {
+                if note_is_public(&object) {
+                    data.update_reply(&id, actor.inner(), &object).await
+                } else {
+                    data.delete_reply(&id, actor.inner(), &object.id, "Update")
+                        .await
+                }
+            }
+            Self::Known(KnownActivity::Delete { actor, object, id }) => {
+                data.delete_reply(&id, actor.inner(), object.id(), "Delete")
+                    .await
+            }
+            Self::Unsupported(activity) => {
+                data.record_unsupported(&activity.id, activity.actor.inner(), &activity.kind)
+                    .await
             }
         }
     }
+}
+
+async fn verify_remote_note(
+    actor: &Url,
+    note: &RemoteNote,
+    data: &Data<FediverseRepository>,
+    require_updated: bool,
+) -> Result<(), Error> {
+    if note.kind != "Note" {
+        return Err(anyhow::anyhow!("unsupported reply object type {}", note.kind).into());
+    }
+    if actor != note.attributed_to.inner() {
+        return Err(anyhow::anyhow!("activity actor does not own reply").into());
+    }
+    verify_domains_match(&note.id, actor)?;
+    if data.published_post_slug(&note.in_reply_to).await?.is_none() {
+        return Err(anyhow::anyhow!("reply does not target a published local post").into());
+    }
+    if require_updated && note.updated.is_none() {
+        return Err(anyhow::anyhow!("reply Update has no updated timestamp").into());
+    }
+    Ok(())
+}
+
+fn note_is_public(note: &RemoteNote) -> bool {
+    const PUBLIC: &str = "https://www.w3.org/ns/activitystreams#Public";
+    note.to
+        .iter()
+        .chain(&note.cc)
+        .any(|url| url.as_str() == PUBLIC)
 }
 
 #[derive(Debug, Serialize)]
@@ -1003,6 +1460,48 @@ pub fn router(config: FederationConfig<FediverseRepository>) -> Router<PgPool> {
         .layer(FederationMiddleware::new(config))
 }
 
+struct VerifiedActivityData(ActivityData);
+
+impl<S> FromRequest<S> for VerifiedActivityData
+where
+    S: Send + Sync,
+{
+    type Rejection = Response;
+
+    async fn from_request(request: Request, state: &S) -> Result<Self, Self::Rejection> {
+        const MAX_INBOX_BYTES: usize = 256 * 1024;
+
+        let (parts, body) = request.into_parts();
+        let bytes = to_bytes(body, MAX_INBOX_BYTES)
+            .await
+            .map_err(|_| StatusCode::PAYLOAD_TOO_LARGE.into_response())?;
+        verify_digest(parts.headers.get("digest"), &bytes)
+            .map_err(|_| StatusCode::BAD_REQUEST.into_response())?;
+        let request = Request::from_parts(parts, Body::from(bytes));
+        ActivityData::from_request(request, state).await.map(Self)
+    }
+}
+
+fn verify_digest(header: Option<&axum::http::HeaderValue>, body: &[u8]) -> Result<(), Error> {
+    let value = header
+        .and_then(|value| value.to_str().ok())
+        .ok_or_else(|| anyhow::anyhow!("missing or invalid Digest header"))?;
+    let encoded = value
+        .split(',')
+        .find_map(|part| {
+            let (algorithm, digest) = part.trim().split_once('=')?;
+            algorithm
+                .eq_ignore_ascii_case("sha-256")
+                .then_some(digest.trim())
+        })
+        .ok_or_else(|| anyhow::anyhow!("Digest header has no SHA-256 value"))?;
+    let expected = BASE64.decode(encoded)?;
+    if expected.as_slice() != Sha256::digest(body).as_slice() {
+        return Err(anyhow::anyhow!("activity body digest does not match").into());
+    }
+    Ok(())
+}
+
 async fn get_actor(
     Path(name): Path<String>,
     data: Data<FediverseRepository>,
@@ -1015,7 +1514,14 @@ async fn get_actor(
     Ok(FederationJson(WithContext::new_default(person)))
 }
 
-async fn post_inbox(data: Data<FediverseRepository>, activity_data: ActivityData) -> Response {
+async fn post_inbox(
+    Path(name): Path<String>,
+    data: Data<FediverseRepository>,
+    VerifiedActivityData(activity_data): VerifiedActivityData,
+) -> Response {
+    if name != data.username {
+        return StatusCode::NOT_FOUND.into_response();
+    }
     match receive_activity::<WithContext<AcceptedActivity>, FediverseActor, FediverseRepository>(
         activity_data,
         &data,
@@ -1238,5 +1744,78 @@ mod tests {
         assert!(mastodon_instance_url("hachyderm.io").is_ok());
         assert!(mastodon_instance_url("http://hachyderm.io").is_err());
         assert!(mastodon_instance_url("https://hachyderm.io/path").is_err());
+    }
+
+    #[test]
+    fn digest_must_match_activity_body() {
+        let body = br#"{"type":"Like"}"#;
+        let digest = BASE64.encode(Sha256::digest(body));
+        let header = axum::http::HeaderValue::from_str(&format!("SHA-256={digest}")).unwrap();
+
+        assert!(verify_digest(Some(&header), body).is_ok());
+        assert!(verify_digest(Some(&header), b"changed").is_err());
+        assert!(verify_digest(None, body).is_err());
+    }
+
+    #[test]
+    fn known_interactions_are_not_parsed_as_unsupported() {
+        let activity: AcceptedActivity = serde_json::from_value(serde_json::json!({
+            "type": "Like",
+            "id": "https://social.example/activities/1",
+            "actor": "https://social.example/users/alice",
+            "object": "https://fedi.flakm.com/blog/posts/example"
+        }))
+        .unwrap();
+
+        assert!(matches!(
+            activity,
+            AcceptedActivity::Known(KnownActivity::Like { .. })
+        ));
+    }
+
+    #[test]
+    fn unknown_interactions_can_be_authenticated_and_ignored() {
+        let activity: AcceptedActivity = serde_json::from_value(serde_json::json!({
+            "type": "EmojiReact",
+            "id": "https://social.example/activities/1",
+            "actor": "https://social.example/users/alice",
+            "object": "https://fedi.flakm.com/blog/posts/example"
+        }))
+        .unwrap();
+
+        assert!(matches!(activity, AcceptedActivity::Unsupported(_)));
+    }
+
+    #[test]
+    fn malformed_known_interactions_can_be_authenticated_and_ignored() {
+        let activity: AcceptedActivity = serde_json::from_value(serde_json::json!({
+            "type": "Update",
+            "id": "https://social.example/activities/1",
+            "actor": "https://social.example/users/alice",
+            "object": "https://social.example/users/alice"
+        }))
+        .unwrap();
+
+        assert!(matches!(activity, AcceptedActivity::Unsupported(_)));
+    }
+
+    #[test]
+    fn only_public_replies_are_publishable() {
+        let note = |audience: &str| {
+            serde_json::from_value::<RemoteNote>(serde_json::json!({
+                "type": "Note",
+                "id": "https://social.example/users/alice/statuses/1",
+                "attributedTo": "https://social.example/users/alice",
+                "inReplyTo": "https://fedi.flakm.com/blog/posts/example",
+                "to": audience,
+                "content": "A reply"
+            }))
+            .unwrap()
+        };
+
+        assert!(note_is_public(&note(
+            "https://www.w3.org/ns/activitystreams#Public"
+        )));
+        assert!(!note_is_public(&note("https://fedi.flakm.com/blog")));
     }
 }

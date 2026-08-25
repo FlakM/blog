@@ -103,6 +103,14 @@ document.querySelectorAll("[data-discussion-section]").forEach(async (section) =
     if (response.ok) {
       const data = await response.json();
       if (Array.isArray(data.links)) data.links.forEach(addLink);
+      const replies = Number.isInteger(data.replies) ? data.replies : 0;
+      const boosts = Number.isInteger(data.boosts) ? data.boosts : 0;
+      const activity = section.querySelector("[data-fediverse-activity]");
+      if (activity && (replies > 0 || boosts > 0)) {
+        activity.querySelector("[data-reply-count]").textContent = `${replies} ${replies === 1 ? "reply" : "replies"}`;
+        activity.querySelector("[data-boost-count]").textContent = `${boosts} ${boosts === 1 ? "boost" : "boosts"}`;
+        activity.classList.remove("hidden");
+      }
     }
   } catch {
     // Front matter links remain usable when the optional backend is unavailable.
