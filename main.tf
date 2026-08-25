@@ -135,6 +135,15 @@ resource "cloudflare_dns_record" "blog_nginx" {
   proxied = false
 }
 
+resource "cloudflare_dns_record" "fedi_nginx" {
+  zone_id = var.ZONE_ID
+  name    = "fedi.flakm.com"
+  content = hcloud_server.blog.ipv4_address
+  type    = "A"
+  ttl     = 300
+  proxied = false
+}
+
 resource "cloudflare_dns_record" "tata_nginx" {
   zone_id = var.ZONE_ID
   name    = "tata.flakm.com"
