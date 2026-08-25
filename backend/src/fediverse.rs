@@ -55,14 +55,7 @@ struct MastodonSearch {
 
 #[derive(Debug, Deserialize)]
 struct MastodonStatus {
-    id: String,
     uri: Url,
-    account: MastodonAccount,
-}
-
-#[derive(Debug, Deserialize)]
-struct MastodonAccount {
-    acct: String,
 }
 
 impl MastodonResolver {
@@ -129,7 +122,7 @@ impl MastodonResolver {
             .statuses
             .into_iter()
             .find(|status| status.uri == *canonical_url)
-            .map(|status| local_mastodon_thread_url(&self.instance, &status))
+            .map(|status| mastodon_interaction_url(&self.instance, &status.uri))
             .transpose()
     }
 }
@@ -286,7 +279,7 @@ impl FediverseRepository {
         for slug in slugs {
             let canonical_url = actor_post_url(actor.ap_id.inner(), &slug)?;
             sqlx::query(
-                "UPDATE blog_post_discussion_links SET source = 'fediverse', label = 'Fediverse' WHERE post_slug = $1 AND source = 'mastodon' AND url = $2",
+                "UPDATE blog_post_discussion_links SET source = 'fediverse', label = 'Fediverse', url = $2 WHERE post_slug = $1 AND source = 'mastodon'",
             )
             .bind(&slug)
             .bind(canonical_url.as_str())
@@ -928,13 +921,10 @@ fn actor_post_url(actor: &Url, slug: &str) -> Result<Url, Error> {
     Ok(url)
 }
 
-fn local_mastodon_thread_url(instance: &Url, status: &MastodonStatus) -> Result<Url, Error> {
-    let mut url = instance.clone();
-    url.path_segments_mut()
-        .map_err(|_| anyhow::anyhow!("Mastodon instance cannot be a base URL"))?
-        .clear()
-        .push(&format!("@{}", status.account.acct))
-        .push(&status.id);
+fn mastodon_interaction_url(instance: &Url, status_url: &Url) -> Result<Url, Error> {
+    let mut url = instance.join("authorize_interaction")?;
+    url.query_pairs_mut()
+        .append_pair("uri", status_url.as_str());
     Ok(url)
 }
 
@@ -1021,21 +1011,15 @@ mod tests {
     }
 
     #[test]
-    fn mastodon_thread_uses_local_status_id_and_remote_account() {
-        let status: MastodonStatus = serde_json::from_value(serde_json::json!({
-            "id": "114123456789",
-            "uri": "https://fedi.flakm.com/blog/posts/example",
-            "url": "https://fedi.flakm.com/blog/posts/example",
-            "account": { "acct": "blog@fedi.flakm.com" }
-        }))
-        .unwrap();
+    fn mastodon_interaction_uses_canonical_status_url() {
+        let status = Url::parse("https://fedi.flakm.com/blog/posts/example").unwrap();
         let instance = Url::parse("https://hachyderm.io/").unwrap();
 
         assert_eq!(
-            local_mastodon_thread_url(&instance, &status)
+            mastodon_interaction_url(&instance, &status)
                 .unwrap()
                 .as_str(),
-            "https://hachyderm.io/@blog@fedi.flakm.com/114123456789"
+            "https://hachyderm.io/authorize_interaction?uri=https%3A%2F%2Ffedi.flakm.com%2Fblog%2Fposts%2Fexample"
         );
     }
 
