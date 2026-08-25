@@ -1,4 +1,5 @@
 use crate::hugo_posts::HugoBlogPost;
+use activitypub_federation::config::FederationConfig;
 use error::Error;
 use sqlx::PgPool;
 use std::net::SocketAddr;
@@ -13,7 +14,9 @@ use tracing::{info, instrument};
 
 mod correlation;
 mod database;
+mod discussions;
 mod error;
+mod fediverse;
 mod hugo_posts;
 mod likes;
 mod observability;
@@ -53,11 +56,47 @@ async fn main() -> Result<(), Error> {
 
     info!("Blog posts processed successfully");
 
+    let fediverse_domain =
+        std::env::var("FEDIVERSE_DOMAIN").unwrap_or_else(|_| "fedi.flakm.com".to_string());
+    let fediverse_username =
+        std::env::var("FEDIVERSE_USERNAME").unwrap_or_else(|_| "blog".to_string());
+    let fediverse_repository = fediverse::FediverseRepository::new(
+        pool.clone(),
+        fediverse_domain.clone(),
+        fediverse_username,
+    );
+    fediverse_repository.ensure_local_actor().await?;
+    fediverse_repository.backfill_discussion_links().await?;
+    let mastodon_resolver = fediverse::MastodonResolver::from_env();
+    let fediverse_config = FederationConfig::builder()
+        .domain(fediverse_domain)
+        .app_data(fediverse_repository.clone())
+        .debug(std::env::var("FEDIVERSE_DEBUG").is_ok_and(|value| value == "true"))
+        .build()
+        .await?;
+    if let Some(resolver) = mastodon_resolver.clone() {
+        tokio::spawn(fediverse::resolve_existing_discussion_links(
+            resolver,
+            blog_repo.clone(),
+        ));
+    }
+    tokio::spawn(fediverse::publish_new_posts(
+        fediverse_repository,
+        blog_repo,
+        fediverse_config.clone(),
+        mastodon_resolver,
+    ));
+
     // Create the Axum app with routes and middleware
     let app = Router::new()
         .route("/like/{post_slug}", post(likes::like_post))
         .route("/likes/{post_slug}", get(likes::get_likes))
+        .route(
+            "/discussions/{post_slug}",
+            get(discussions::get_discussion_links),
+        )
         .route("/health", get(health_check))
+        .merge(fediverse::router(fediverse_config))
         .layer(middleware::from_fn(correlation::correlation_middleware))
         .layer(CorsLayer::permissive()) // Allow CORS for frontend
         .layer(

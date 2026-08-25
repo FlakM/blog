@@ -1,0 +1,11 @@
+{{ define "title" }}Page not found · {{ .Site.Title }}{{ end }}
+{{ define "content" }}
+  <section class="mx-auto grid min-h-[70vh] max-w-3xl place-items-center px-5 py-20 text-center sm:px-8">
+    <div>
+      <p class="font-mono text-sm text-accent">404</p>
+      <h1 class="mt-5 text-5xl font-black tracking-[-0.05em] text-ink-strong sm:text-7xl">Nothing here.</h1>
+      <p class="mx-auto mt-5 max-w-md text-lg leading-relaxed text-muted">The page moved, disappeared, or never existed.</p>
+      <a href="{{ relLangURL "" }}" class="mt-8 inline-flex rounded-xl bg-ink-strong px-5 py-3 text-sm font-bold text-canvas transition-transform hover:-translate-y-0.5">Back home</a>
+    </div>
+  </section>
+{{ end }}

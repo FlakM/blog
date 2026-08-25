@@ -1,0 +1,30 @@
+{{ $slug := .File.TranslationBaseName }}
+{{ with .Params.slug }}{{ $slug = . }}{{ end }}
+{{ $links := .Params.discussion_links | default slice }}
+{{ $sourceLabels := dict "fediverse" "Fediverse" "hacker_news" "Hacker News" "mastodon" "Mastodon" "reddit" "Reddit" }}
+<section
+  class="mt-10 rounded-2xl border border-line bg-panel p-5 sm:p-6{{ if not $links }} hidden{{ end }}"
+  id="discussion-section-{{ $slug }}"
+  aria-labelledby="discussion-heading-{{ $slug }}"
+  data-discussion-section
+  data-discussion-api-base="{{ .Site.Params.discussions.apiBase | default "/api" }}"
+  data-discussion-slug="{{ $slug }}"
+>
+  <h2 id="discussion-heading-{{ $slug }}" class="font-mono text-xs font-bold uppercase tracking-[0.16em] text-accent">Discuss this post</h2>
+  <p class="mt-2 text-sm leading-relaxed text-muted">Read responses and join the conversation elsewhere.</p>
+  <ul class="mt-4 flex flex-wrap gap-3" id="discussion-links-{{ $slug }}" role="list" aria-live="polite">
+    {{ range $link := $links }}
+      {{ with $link.url }}
+        {{ $source := $link.source | default "discussion" }}
+        {{ $label := $link.label | default (index $sourceLabels $source) | default ($source | humanize) }}
+        <li data-discussion-url="{{ . }}">
+          <a href="{{ . }}" rel="noopener noreferrer" class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-panel-raised px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent">
+            {{ $label }}
+            <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8M19 13v6H5V5h6"/></svg>
+            <span class="sr-only">on another site</span>
+          </a>
+        </li>
+      {{ end }}
+    {{ end }}
+  </ul>
+</section>

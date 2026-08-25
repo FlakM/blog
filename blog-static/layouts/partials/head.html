@@ -1,0 +1,27 @@
+{{ partial "head/meta-tags.html" . }}
+{{ if .Params.canonicalUrl }}
+  <link rel="canonical" href="{{ .Params.canonicalUrl }}">
+{{ else }}
+  <link rel="canonical" href="{{ .Permalink }}">
+{{ end }}
+<link rel="icon" href="{{ "images/favicon.ico" | relURL }}" sizes="any">
+<link rel="icon" href="{{ "images/favicon.svg" | relURL }}" type="image/svg+xml">
+<link rel="apple-touch-icon" href="{{ "images/apple-touch-icon.png" | relURL }}">
+<link rel="manifest" href="{{ "images/site.webmanifest" | relURL }}">
+{{ partial "head/alternative-output-formats.html" . }}
+{{ with .Site.Params.fediverse }}{{ if .enable }}<meta name="fediverse:creator" content="@{{ .username }}@{{ .domain }}">{{ end }}{{ end }}
+{{ $style := resources.Get "css/site.css" }}
+{{ if hugo.IsServer }}
+  <link rel="stylesheet" href="{{ $style.RelPermalink }}">
+{{ else }}
+  {{ $style = $style | minify | fingerprint }}
+  <link rel="stylesheet" href="{{ $style.RelPermalink }}" integrity="{{ $style.Data.Integrity }}">
+{{ end }}
+<script>
+  (() => {
+    const theme = localStorage.getItem("theme") || "auto";
+    const dark = theme === "dark" || (theme === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.classList.toggle("dark", dark);
+    document.documentElement.dataset.theme = theme;
+  })();
+</script>

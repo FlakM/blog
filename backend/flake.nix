@@ -77,6 +77,30 @@
                 default = "./posts.json";
                 description = "The path to the posts json file";
               };
+
+              fediverse_domain = mkOption {
+                type = types.str;
+                default = cfg.domain;
+                description = "Public domain for the ActivityPub actor";
+              };
+
+              fediverse_username = mkOption {
+                type = types.str;
+                default = "blog";
+                description = "ActivityPub actor username";
+              };
+
+              preferred_mastodon_instance = mkOption {
+                type = types.nullOr types.str;
+                default = null;
+                description = "Mastodon instance used for human-facing discussion links";
+              };
+
+              mastodon_access_token_file = mkOption {
+                type = types.nullOr types.str;
+                default = null;
+                description = "File containing a Mastodon user token with read:search scope";
+              };
             };
 
             config = mkIf cfg.enable {
@@ -95,40 +119,82 @@
                   "OTEL_SERVICE_NAME" = "blog-backend";
                   "OTEL_SERVICE_VERSION" = "1.0.0";
                   "OTEL_RESOURCE_ATTRIBUTES" = "deployment.environment=production";
+                  "FEDIVERSE_DOMAIN" = cfg.fediverse_domain;
+                  "FEDIVERSE_USERNAME" = cfg.fediverse_username;
+                } // optionalAttrs (cfg.preferred_mastodon_instance != null) {
+                  "PREFERRED_MASTODON_INSTANCE" = cfg.preferred_mastodon_instance;
+                } // optionalAttrs (cfg.mastodon_access_token_file != null) {
+                  "MASTODON_ACCESS_TOKEN_FILE" = cfg.mastodon_access_token_file;
                 };
               };
 
-              services.nginx.virtualHosts.${cfg.domain} = {
-                locations."/api/health" = {
-                  proxyPass = "http://127.0.0.1:3000/health";
-                  extraConfig = ''
-                    proxy_set_header Host $host;
-                    proxy_set_header X-Real-IP $remote_addr;
-                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                    proxy_set_header X-Forwarded-Proto $scheme;
-                  '';
-                  priority = 10;
+              services.nginx.virtualHosts = {
+                ${cfg.domain} = {
+                  locations."/api/health" = {
+                    proxyPass = "http://127.0.0.1:3000/health";
+                    extraConfig = ''
+                      proxy_set_header Host $host;
+                      proxy_set_header X-Real-IP $remote_addr;
+                      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                      proxy_set_header X-Forwarded-Proto $scheme;
+                    '';
+                    priority = 10;
+                  };
+                  locations."/api/metrics" = {
+                    proxyPass = "http://127.0.0.1:9090/metrics";
+                    extraConfig = ''
+                      proxy_set_header Host $host;
+                      proxy_set_header X-Real-IP $remote_addr;
+                      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                      proxy_set_header X-Forwarded-Proto $scheme;
+                    '';
+                    priority = 10;
+                  };
+                  locations."~ ^/api/(?:likes?|discussions)/" = {
+                    proxyPass = "http://127.0.0.1:3000";
+                    extraConfig = ''
+                      proxy_set_header Host $host;
+                      proxy_set_header X-Real-IP $remote_addr;
+                      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                      proxy_set_header X-Forwarded-Proto $scheme;
+                      rewrite ^/api(/.*) $1 break;
+                    '';
+                    priority = 10;
+                  };
+                  locations."= /.well-known/webfinger" = {
+                    proxyPass = "http://127.0.0.1:3000";
+                    extraConfig = ''
+                      proxy_set_header Host $host;
+                      proxy_set_header X-Real-IP $remote_addr;
+                      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                      proxy_set_header X-Forwarded-Proto $scheme;
+                    '';
+                    priority = 10;
+                  };
+                  locations."~ ^/${cfg.fediverse_username}(?:/|$)" = {
+                    proxyPass = "http://127.0.0.1:3000";
+                    extraConfig = ''
+                      proxy_set_header Host $host;
+                      proxy_set_header X-Real-IP $remote_addr;
+                      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                      proxy_set_header X-Forwarded-Proto $scheme;
+                    '';
+                    priority = 10;
+                  };
                 };
-                locations."/api/metrics" = {
-                  proxyPass = "http://127.0.0.1:9090/metrics";
-                  extraConfig = ''
-                    proxy_set_header Host $host;
-                    proxy_set_header X-Real-IP $remote_addr;
-                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                    proxy_set_header X-Forwarded-Proto $scheme;
-                  '';
-                  priority = 10;
-                };
-                locations."~ ^/api/likes?/" = {
-                  proxyPass = "http://127.0.0.1:3000";
-                  extraConfig = ''
-                    proxy_set_header Host $host;
-                    proxy_set_header X-Real-IP $remote_addr;
-                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                    proxy_set_header X-Forwarded-Proto $scheme;
-                    rewrite ^/api(/.*) $1 break;
-                  '';
-                  priority = 10;
+              } // optionalAttrs (cfg.fediverse_domain != cfg.domain) {
+                ${cfg.fediverse_domain} = {
+                  forceSSL = true;
+                  enableACME = true;
+                  locations."/" = {
+                    proxyPass = "http://127.0.0.1:3000";
+                    extraConfig = ''
+                      proxy_set_header Host $host;
+                      proxy_set_header X-Real-IP $remote_addr;
+                      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                      proxy_set_header X-Forwarded-Proto $scheme;
+                    '';
+                  };
                 };
               };
             };

@@ -2,59 +2,46 @@
   {{ .Title }} · {{ .Site.Title }}
 {{ end }}
 {{ define "content" }}
-  <section class="container post">
-
+  <section class="mx-auto max-w-3xl px-5 pb-16 pt-14 sm:px-8 sm:pt-24">
     <article>
-      <header>
-        <div class="post-title">
-          <h1 class="title">
-            <a class="title-link" href="{{ .Permalink | safeURL }}">
-              {{ .Title }}
-            </a>
-          </h1>
+      <header class="mb-12 sm:mb-16">
+        <div class="flex items-center gap-3 font-mono text-xs uppercase tracking-[0.16em] text-accent">
+          <span class="h-px w-8 bg-accent"></span>
+          Technical note
         </div>
-
-
-        <div class="post-meta">
-          <div class="date">
-            <span class="posted-on">
-              <i class="fa-solid fa-calendar" aria-hidden="true"></i>
-              <time datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
-                {{ .Date | time.Format (.Site.Params.dateFormat | default "January 2, 2006" ) }}
-              </time>
-            </span>
-            <span class="reading-time">
-              <i class="fa-solid fa-clock" aria-hidden="true"></i>
-              {{ i18n "reading_time" .ReadingTime }}
-            </span>
-          </div>
-          {{ with .GetTerms "authors" }}{{ partial "taxonomy/authors.html" . }}{{ end }}
-          {{ with .GetTerms "categories" }}{{ partial "taxonomy/categories.html" . }}{{ end }}
-          {{ with .GetTerms "tags" }}{{ partial "taxonomy/tags.html" . }}{{ end }}
+        <h1 class="mt-6 text-balance text-[2.75rem] font-black leading-[0.98] tracking-[-0.055em] text-ink-strong sm:text-6xl lg:text-7xl">
+          <a href="{{ .Permalink | safeURL }}">{{ .Title }}</a>
+        </h1>
+        <div class="mt-7 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm text-muted">
+          <time datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}" class="inline-flex items-center gap-2">
+            <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"/></svg>
+            {{ .Date | time.Format (.Site.Params.dateFormat | default "January 2, 2006") }}
+          </time>
+          <span class="inline-flex items-center gap-2">
+            <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            {{ .ReadingTime }} min read
+          </span>
+        </div>
+        <div class="mt-5 flex flex-wrap gap-2">
+          {{ range .GetTerms "tags" }}
+            <a href="{{ .RelPermalink }}" class="rounded-full border border-line px-3 py-1 text-xs font-semibold text-muted transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent">{{ .LinkTitle }}</a>
+          {{ end }}
         </div>
       </header>
 
-      <div class="post-content">
+      <div class="prose-blog">
         {{ if .Params.featuredImage }}
-          <img src="{{ .Params.featuredImage | relURL }}" alt="Featured image"/>
+          <img src="{{ .Params.featuredImage | relURL }}" alt="Featured image">
         {{ end }}
         {{ .Content }}
       </div>
-
-
       <footer>
         {{ partial "posts/likes.html" . }}
+        {{ partial "posts/discussions.html" . }}
+        {{ partial "posts/fediverse.html" . }}
         {{ partial "posts/series.html" . }}
-        {{ partial "posts/disqus.html" . }}
-        {{ partial "posts/commento.html" . }}
-        {{ partial "posts/utterances.html" . }}
-        {{ partial "posts/giscus.html" . }}
-        {{ partial "posts/mastodon.html" . }}
-        {{ partial "posts/telegram.html" . }}
-        {{ partial "posts/cusdis.html" . }}
       </footer>
     </article>
-
     {{ partial "posts/math.html" . }}
   </section>
 {{ end }}

@@ -1,0 +1,21 @@
+{{ with .Site.Params.fediverse }}
+  {{ if .enable }}
+    {{ $handle := printf "@%s@%s" .username .domain }}
+    <section class="mt-10 rounded-2xl border border-line bg-panel p-5 sm:p-6" aria-labelledby="fediverse-follow-heading">
+      <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 id="fediverse-follow-heading" class="font-mono text-xs font-bold uppercase tracking-[0.16em] text-accent">Follow on the Fediverse</h2>
+          <p class="mt-2 max-w-xl text-sm leading-relaxed text-muted">Get new posts in Mastodon or another ActivityPub app. Search for <strong class="font-mono text-ink-strong">{{ $handle }}</strong>.</p>
+        </div>
+        <button
+          type="button"
+          class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-line bg-panel-raised px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
+          data-copy-fediverse="{{ $handle }}"
+        >
+          <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+          <span data-fediverse-copy-label aria-live="polite">Copy handle</span>
+        </button>
+      </div>
+    </section>
+  {{ end }}
+{{ end }}

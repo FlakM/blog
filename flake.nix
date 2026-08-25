@@ -117,6 +117,7 @@
           opentofu # provisioning tool for the OpenTofu project
           ponysay # just for fun run `ponysay hello`
           hugo
+          tailwindcss_4
           sqlx-cli
           python3
           python3Packages.cairosvg

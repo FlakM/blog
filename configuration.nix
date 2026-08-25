@@ -1,4 +1,4 @@
-{ system, lib, pkgs, modulesPath, backend, static, ... }: {
+{ system, lib, pkgs, modulesPath, backend, static, config, ... }: {
   imports = [
     # Adds availableKernelModules, kernelModules for instances running under QEMU (Ie Hetzner Cloud)
     (modulesPath + "/profiles/qemu-guest.nix")
@@ -19,6 +19,9 @@
         mode = "0400";
       };
       plausible_secret_key_base = {
+        mode = "0400";
+      };
+      mastodon_access_token = {
         mode = "0400";
       };
     };
@@ -72,6 +75,9 @@
     backend = {
       enable = true;
       domain = "blog.flakm.com";
+      fediverse_domain = "fedi.flakm.com";
+      preferred_mastodon_instance = "hachyderm.io";
+      mastodon_access_token_file = config.sops.secrets.mastodon_access_token.path;
       posts_path = "${static.packages.x86_64-linux.default}/bloglist.json";
     };
 
@@ -397,6 +403,7 @@
     acceptTerms = true;
     certs = {
       "blog.flakm.com".email = "me@flakm.com";
+      "fedi.flakm.com".email = "me@flakm.com";
       "tata.flakm.com".email = "me@flakm.com";
       "jellyfin.public.flakm.com".email = "me@flakm.com";
       "audiobookshelf.public.flakm.com".email = "me@flakm.com";

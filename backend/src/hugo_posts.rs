@@ -79,6 +79,7 @@ impl HugoBlogPost {
     }
 }
 
+#[derive(Clone)]
 pub struct BlogRepository {
     pub db: sqlx::PgPool,
 }
@@ -109,5 +110,91 @@ impl BlogRepository {
             .record(start_time.elapsed().as_millis() as f64);
 
         Ok(())
+    }
+
+    pub async fn unpublished_fediverse_posts(&self) -> Result<Vec<HugoBlogPost>, Error> {
+        sqlx::query_as::<_, HugoBlogPost>(
+            "SELECT title, slug, description, date, featured_image, tags, url FROM blog_posts WHERE slug NOT IN (SELECT slug FROM fediverse_published_posts) ORDER BY date",
+        )
+        .fetch_all(&self.db)
+        .await
+    }
+
+    pub async fn record_fediverse_publication(
+        &self,
+        slug: &str,
+        canonical_url: &Url,
+    ) -> Result<(), Error> {
+        let mut transaction = self.db.begin().await?;
+        sqlx::query(
+            "DELETE FROM blog_post_discussion_links WHERE post_slug = $1 AND source IN ('fediverse', 'mastodon')",
+        )
+        .bind(slug)
+        .execute(&mut *transaction)
+        .await?;
+        sqlx::query(
+            "INSERT INTO blog_post_discussion_links (post_slug, source, label, url) VALUES ($1, 'fediverse', 'Fediverse', $2)",
+        )
+        .bind(slug)
+        .bind(canonical_url.as_str())
+        .execute(&mut *transaction)
+        .await?;
+        sqlx::query(
+            "INSERT INTO fediverse_published_posts (slug) VALUES ($1) ON CONFLICT (slug) DO NOTHING",
+        )
+        .bind(slug)
+        .execute(&mut *transaction)
+        .await?;
+        transaction.commit().await?;
+        Ok(())
+    }
+
+    pub async fn record_mastodon_discussion(
+        &self,
+        slug: &str,
+        thread_url: &Url,
+    ) -> Result<(), Error> {
+        let mut transaction = self.db.begin().await?;
+        sqlx::query(
+            "DELETE FROM blog_post_discussion_links WHERE post_slug = $1 AND source IN ('fediverse', 'mastodon')",
+        )
+        .bind(slug)
+        .execute(&mut *transaction)
+        .await?;
+        sqlx::query(
+            "INSERT INTO blog_post_discussion_links (post_slug, source, label, url) VALUES ($1, 'mastodon', 'Mastodon', $2)",
+        )
+        .bind(slug)
+        .bind(thread_url.as_str())
+        .execute(&mut *transaction)
+        .await?;
+        transaction.commit().await?;
+        Ok(())
+    }
+
+    pub async fn fediverse_fallbacks(&self) -> Result<Vec<(String, Url)>, Error> {
+        let rows = sqlx::query_as::<_, (String, String)>(
+            "SELECT post_slug, url FROM blog_post_discussion_links WHERE source = 'fediverse' ORDER BY created_at",
+        )
+        .fetch_all(&self.db)
+        .await?;
+
+        rows.into_iter()
+            .map(|(slug, url)| {
+                Ok((
+                    slug,
+                    Url::parse(&url).map_err(|error| Error::Decode(Box::new(error)))?,
+                ))
+            })
+            .collect()
+    }
+
+    pub async fn by_slug(&self, slug: &str) -> Result<Option<HugoBlogPost>, Error> {
+        sqlx::query_as::<_, HugoBlogPost>(
+            "SELECT title, slug, description, date, featured_image, tags, url FROM blog_posts WHERE slug = $1",
+        )
+        .bind(slug)
+        .fetch_optional(&self.db)
+        .await
     }
 }

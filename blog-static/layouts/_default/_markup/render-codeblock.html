@@ -1,0 +1,30 @@
+{{ $result := transform.HighlightCodeBlock . }}
+{{ $language := .Type | default "text" }}
+{{ $title := index .Attributes "title" }}
+{{ $terminalLanguages := slice "ansi" "bash" "console" "fish" "powershell" "sh" "shell" "shellsession" "zsh" }}
+<figure class="code-frame">
+  <figcaption class="flex h-11 items-center justify-between border-b border-black/5 px-4 dark:border-white/10">
+    <div class="flex items-center gap-4">
+      <span class="flex gap-1.5" aria-hidden="true">
+        <span class="size-2 rounded-full bg-[#d20f39] dark:bg-[#f38ba8]"></span>
+        <span class="size-2 rounded-full bg-[#df8e1d] dark:bg-[#f9e2af]"></span>
+        <span class="size-2 rounded-full bg-[#40a02b] dark:bg-[#a6e3a1]"></span>
+      </span>
+      {{ with $title }}
+        <span class="truncate font-mono text-[0.72rem] font-semibold text-[#5c5f77] dark:text-[#a6adc8]">{{ . }}</span>
+      {{ else }}
+        {{ if in $terminalLanguages $language }}
+          <span class="font-mono text-[0.72rem] font-semibold text-[#5c5f77] dark:text-[#a6adc8]">Terminal</span>
+        {{ end }}
+      {{ end }}
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="font-mono text-[0.65rem] font-bold uppercase tracking-[0.12em] text-[#5c5f77] dark:text-[#a6adc8]">{{ $language }}</span>
+      <button type="button" data-copy-code class="hidden items-center gap-1.5 rounded-md px-2 py-1 font-mono text-[0.68rem] font-bold uppercase tracking-[0.08em] text-[#5c5f77] transition-colors hover:bg-black/5 hover:text-[#4c4f69] dark:text-[#a6adc8] dark:hover:bg-white/10 dark:hover:text-[#cdd6f4]" aria-label="Copy code">
+        <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+        <span data-copy-label aria-live="polite">Copy</span>
+      </button>
+    </div>
+  </figcaption>
+  {{ $result.Wrapped }}
+</figure>

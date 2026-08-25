@@ -1,0 +1,16 @@
+<div class="divide-y divide-line border-y border-line">
+  {{ range .Paginator.Pages }}
+    <article class="group grid gap-3 py-6 sm:grid-cols-[8.5rem_1fr] sm:items-start sm:gap-6">
+      <time datetime="{{ .Date.Format "2006-01-02" }}" class="pt-1 font-mono text-xs text-muted">
+        {{ .Date | time.Format (.Site.Params.dateFormat | default "January 2, 2006") }}
+      </time>
+      <div>
+        <h2 class="text-balance text-lg font-bold leading-snug tracking-[-0.02em] text-ink-strong sm:text-xl">
+          <a href="{{ .Params.externalLink | default .RelPermalink }}" class="transition-colors group-hover:text-accent">{{ .Title }}</a>
+        </h2>
+        {{ with .Description }}<p class="mt-2 line-clamp-2 text-sm leading-relaxed text-muted">{{ . }}</p>{{ end }}
+      </div>
+    </article>
+  {{ end }}
+</div>
+{{ partial "pagination.html" . }}

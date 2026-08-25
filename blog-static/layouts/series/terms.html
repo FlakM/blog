@@ -1,0 +1,37 @@
+{{ define "title" }}{{ .Title }} · {{ .Site.Title }}{{ end }}
+{{ define "content" }}
+  <section class="mx-auto max-w-6xl px-5 pb-16 pt-16 sm:px-8 sm:pt-24">
+    <header class="mb-12 max-w-3xl sm:mb-16">
+      <p class="font-mono text-xs uppercase tracking-[0.18em] text-accent">Guided reading</p>
+      <h1 class="mt-4 text-balance text-5xl font-black tracking-[-0.05em] text-ink-strong sm:text-7xl">{{ .Title }}</h1>
+      <p class="mt-5 max-w-2xl text-lg leading-relaxed text-muted">Long-form notes grouped into ordered paths. Start at chapter one or pick up where you left off.</p>
+    </header>
+
+    <div class="grid gap-5 md:grid-cols-2">
+      {{ range $index, $term := .Data.Terms.ByCount }}
+        {{ $pages := sort $term.Page.Pages "File.Path" }}
+        <article class="group flex flex-col rounded-2xl border border-line bg-panel p-6 transition-all hover:-translate-y-0.5 hover:border-accent sm:p-8">
+          <div class="flex items-center justify-between gap-4">
+            <span class="font-mono text-xs uppercase tracking-[0.16em] text-muted">Series {{ printf "%02d" (add $index 1) }}</span>
+            <span class="rounded-full bg-panel-raised px-3 py-1 font-mono text-xs text-muted">{{ $term.Count }} {{ cond (eq $term.Count 1) "chapter" "chapters" }}</span>
+          </div>
+          <h2 class="mt-6 text-balance text-2xl font-black leading-tight tracking-[-0.035em] text-ink-strong sm:text-3xl">
+            <a href="{{ $term.Page.RelPermalink }}" class="transition-colors group-hover:text-accent">{{ $term.Page.Title }}</a>
+          </h2>
+          <ol class="mt-6 flex-1 space-y-3 border-l border-line pl-4">
+            {{ range $chapter, $page := first 3 $pages }}
+              <li class="grid grid-cols-[1.5rem_1fr] gap-2 text-sm leading-relaxed text-muted">
+                <span class="font-mono text-xs text-accent">{{ printf "%02d" (add $chapter 1) }}</span>
+                <span>{{ $page.Title }}</span>
+              </li>
+            {{ end }}
+          </ol>
+          <a href="{{ $term.Page.RelPermalink }}" class="mt-7 inline-flex items-center gap-2 self-start text-sm font-bold text-accent">
+            Explore series
+            <svg viewBox="0 0 20 20" class="size-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 10h12M11 5l5 5-5 5"/></svg>
+          </a>
+        </article>
+      {{ end }}
+    </div>
+  </section>
+{{ end }}

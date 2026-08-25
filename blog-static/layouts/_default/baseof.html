@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="{{ .Site.Language.Lang }}" class="bg-canvas">
+  <head>
+    <title>{{ block "title" . }}{{ .Site.Title }}{{ end }}</title>
+    {{ partial "head.html" . }}
+  </head>
+  <body class="min-h-screen">
+    <div class="min-h-screen">
+      {{ partial "header.html" . }}
+      <main>{{ block "content" . }}{{ end }}</main>
+      {{ partial "footer.html" . }}
+    </div>
+    {{ $script := resources.Get "js/site.js" }}
+    {{ if hugo.IsServer }}
+      <script src="{{ $script.RelPermalink }}"></script>
+    {{ else }}
+      {{ $script = $script | minify | fingerprint }}
+      <script src="{{ $script.RelPermalink }}" integrity="{{ $script.Data.Integrity }}"></script>
+    {{ end }}
+    {{ if and .Site.Params.plausibleAnalytics .Site.Params.plausibleAnalytics.domain }}
+      {{ partial "analytics/plausible.html" . }}
+    {{ end }}
+  </body>
+</html>

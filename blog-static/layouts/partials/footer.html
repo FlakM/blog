@@ -1,4 +1,7 @@
 <!-- <h1>Mój footer</h1> -->
 
 
-
+<footer class="mx-auto mt-24 flex max-w-6xl items-center justify-between border-t border-line px-5 py-8 text-xs text-muted sm:px-8">
+  <span>&copy; {{ now.Year }} {{ .Site.Params.author }}</span>
+  <a href="{{ "index.xml" | relURL }}" class="font-medium transition-colors hover:text-accent">RSS</a>
+</footer>

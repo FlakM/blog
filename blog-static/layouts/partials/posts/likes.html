@@ -1,129 +1,87 @@
 {{ if .Site.Params.likes.enable }}
-<div class="like-section" id="like-section-{{ .File.BaseFileName }}">
-  <div class="like-container">
-    <button 
-      class="like-button" 
-      id="like-btn-{{ .File.BaseFileName }}"
-      onclick="handleLike('{{ .File.BaseFileName }}')"
-      title="Like this post"
-    >
-      <i class="fa-solid fa-heart" id="heart-{{ .File.BaseFileName }}"></i>
-      <span class="like-text">Like</span>
-    </button>
-    <span class="like-count" id="like-count-{{ .File.BaseFileName }}">
-      <i class="fa-solid fa-spinner fa-spin" style="display: none;" id="spinner-{{ .File.BaseFileName }}"></i>
-      <span id="count-{{ .File.BaseFileName }}">0</span>
-    </span>
-  </div>
-  <div class="like-message" id="like-message-{{ .File.BaseFileName }}" style="display: none;"></div>
-</div>
+  {{ $slug := .File.TranslationBaseName }}
+  {{ with .Params.slug }}{{ $slug = . }}{{ end }}
+  <section class="mt-20 border-t border-line pt-8" id="like-section-{{ $slug }}">
+    <div class="flex items-center gap-3">
+      <button
+        class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-panel px-4 py-2 text-sm font-bold text-ink transition-all hover:-translate-y-0.5 hover:border-accent hover:bg-accent-soft hover:text-accent disabled:cursor-wait disabled:opacity-60"
+        id="like-btn-{{ $slug }}"
+        onclick="handleLike('{{ $slug }}')"
+        title="Like this post"
+      >
+        <svg viewBox="0 0 24 24" class="size-4" id="heart-{{ $slug }}" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg>
+        <svg viewBox="0 0 24 24" class="hidden size-4 animate-spin" id="spinner-{{ $slug }}" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>
+        <span>Like</span>
+      </button>
+      <span class="grid min-h-11 min-w-11 place-items-center rounded-xl border border-line px-3 font-mono text-sm text-muted" id="like-count-{{ $slug }}">
+        <span id="count-{{ $slug }}">0</span>
+      </span>
+    </div>
+    <div class="like-message mt-3 hidden w-fit rounded-lg border border-line px-3 py-2 text-sm" id="like-message-{{ $slug }}"></div>
+  </section>
 
-<script>
-// Global like functionality
-window.likeFunctionality = window.likeFunctionality || {};
+  <script>
+    (() => {
+      const slug = {{ $slug | jsonify | safeJS }};
+      const apiBase = {{ (.Site.Params.likes.apiBase | default "/api") | jsonify | safeJS }};
+      const button = document.getElementById(`like-btn-${slug}`);
+      const heart = document.getElementById(`heart-${slug}`);
+      const spinner = document.getElementById(`spinner-${slug}`);
+      const count = document.getElementById(`count-${slug}`);
+      const message = document.getElementById(`like-message-${slug}`);
 
-(function() {
-  const postSlug = '{{ .File.BaseFileName }}';
-  const apiBase = '{{ .Site.Params.likes.apiBase | default "/api" }}';
-  
-  // Load initial like count
-  async function loadLikeCount() {
-    const spinner = document.getElementById(`spinner-${postSlug}`);
-    const countElement = document.getElementById(`count-${postSlug}`);
-    
-    try {
-      spinner.style.display = 'inline-block';
-      const response = await fetch(`${apiBase}/likes/${postSlug}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        countElement.textContent = data.total_likes;
+      function loading(active) {
+        button.disabled = active;
+        heart.classList.toggle("hidden", active);
+        spinner.classList.toggle("hidden", !active);
       }
-    } catch (error) {
-      console.error('Failed to load like count:', error);
-      countElement.textContent = '0';
-    } finally {
-      spinner.style.display = 'none';
-    }
-  }
-  
-  // Handle like button click
-  window.handleLike = async function(slug) {
-    if (slug !== postSlug) return;
-    
-    const button = document.getElementById(`like-btn-${postSlug}`);
-    const heart = document.getElementById(`heart-${postSlug}`);
-    const countElement = document.getElementById(`count-${postSlug}`);
-    const messageElement = document.getElementById(`like-message-${postSlug}`);
-    const spinner = document.getElementById(`spinner-${postSlug}`);
-    
-    // Disable button during request
-    button.disabled = true;
-    heart.className = 'fa-solid fa-spinner fa-spin';
-    
-    try {
-      const response = await fetch(`${apiBase}/like/${postSlug}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+
+      function showMessage(text, kind) {
+        message.textContent = text;
+        message.className = `like-message mt-3 w-fit rounded-lg border px-3 py-2 text-sm ${kind}`;
+        setTimeout(() => message.classList.add("hidden"), kind === "success" ? 3000 : 5000);
+      }
+
+      async function loadLikeCount() {
+        loading(true);
+        try {
+          const response = await fetch(`${apiBase}/likes/${slug}`);
+          const data = await response.json();
+          if (data.success) count.textContent = data.total_likes;
+        } catch (error) {
+          console.error("Failed to load like count:", error);
+        } finally {
+          loading(false);
         }
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        // Update count
-        countElement.textContent = data.total_likes;
-        
-        // Show success animation
-        heart.className = 'fa-solid fa-heart liked';
-        button.classList.add('liked');
-        
-        // Show success message
-        messageElement.textContent = 'Thanks for liking this post! ❤️';
-        messageElement.style.display = 'block';
-        messageElement.className = 'like-message success';
-        
-        // Auto-hide message after 3 seconds
-        setTimeout(() => {
-          messageElement.style.display = 'none';
-        }, 3000);
-        
+      }
+
+      window.handleLike = async function(postSlug) {
+        if (postSlug !== slug) return;
+        loading(true);
+        try {
+          const response = await fetch(`${apiBase}/like/${slug}`, { method: "POST" });
+          const data = await response.json();
+          if (!data.success) {
+            showMessage(data.message || "Could not like this post", "error");
+            return;
+          }
+          count.textContent = data.total_likes;
+          heart.setAttribute("fill", "currentColor");
+          button.classList.add("border-accent", "bg-accent-soft", "text-accent");
+          showMessage("Thanks for liking this post!", "success");
+        } catch (error) {
+          console.error("Failed to like post:", error);
+          showMessage("Network error. Please try again.", "error");
+        } finally {
+          loading(false);
+        }
+      };
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", loadLikeCount);
       } else {
-        // Show error message
-        messageElement.textContent = data.message || 'Could not like this post';
-        messageElement.style.display = 'block';
-        messageElement.className = 'like-message error';
-        
-        // Auto-hide message after 5 seconds
-        setTimeout(() => {
-          messageElement.style.display = 'none';
-        }, 5000);
+        loadLikeCount();
       }
-    } catch (error) {
-      console.error('Failed to like post:', error);
-      messageElement.textContent = 'Network error - please try again';
-      messageElement.style.display = 'block';
-      messageElement.className = 'like-message error';
-      
-      setTimeout(() => {
-        messageElement.style.display = 'none';
-      }, 5000);
-    } finally {
-      // Re-enable button
-      button.disabled = false;
-      if (!button.classList.contains('liked')) {
-        heart.className = 'fa-solid fa-heart';
-      }
-    }
-  };
-  
-  // Load like count when page loads
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadLikeCount);
-  } else {
-    loadLikeCount();
-  }
-})();
-</script>
+    })();
+  </script>
 {{ end }}

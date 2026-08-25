@@ -149,7 +149,32 @@ The backend provides the following REST API endpoints:
 - `GET /health` - Health check endpoint
 - `POST /like/{post-slug}` - Like a blog post (rate limited: 1 per hour per IP)
 - `GET /likes/{post-slug}` - Get like count for a blog post
+- `GET /discussions/{post-slug}` - Get backend-managed external discussion links
 - `GET /metrics` - Prometheus metrics (if enabled)
+
+ActivityPub publication first stores the post's canonical URL as a `Fediverse` fallback. When a preferred Mastodon instance and user token are configured, the backend resolves the status through Mastodon's authenticated search API and replaces the fallback with that instance's human-facing `Mastodon` thread URL. Resolution failure never blocks publication. The article footer fetches the resulting link automatically. Editorial links use front matter and require no third-party discovery:
+
+```yaml
+discussion_links:
+  - source: hacker_news
+    url: https://news.ycombinator.com/item?id=123
+  - source: reddit
+    url: https://www.reddit.com/r/rust/comments/example
+  - source: lobsters
+    label: Lobsters
+    url: https://lobste.rs/s/example
+```
+
+`label` is optional for Hacker News, Reddit, and Mastodon. Other sources use a humanized source name unless an explicit label is provided.
+
+The preferred-instance resolver uses these environment variables:
+
+```text
+PREFERRED_MASTODON_INSTANCE=hachyderm.io
+MASTODON_ACCESS_TOKEN_FILE=/run/secrets/mastodon_access_token
+```
+
+The token is a Mastodon user token with `read:search` scope. It is read from a file and is never returned by the API or embedded in the static site.
 
 ### Rate Limiting
 
@@ -174,6 +199,7 @@ The system uses PostgreSQL with the following main tables:
 
 - `blog_posts` - Blog post metadata loaded from Hugo JSON export
 - `blog_post_likes` - Like tracking with IP-based rate limiting
+- `blog_post_discussion_links` - Persisted backend-managed discussion URLs
 
 Migration files are located in `backend/migrations/` and are automatically applied on startup.
 

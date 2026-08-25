@@ -1,0 +1,12 @@
+{{ $paginator := .Paginator }}
+{{ if gt $paginator.TotalPages 1 }}
+  <nav class="mt-10 flex items-center justify-between" aria-label="Pagination">
+    {{ if $paginator.HasPrev }}
+      <a href="{{ $paginator.Prev.URL }}" class="rounded-xl border border-line bg-panel px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-accent hover:text-accent">Previous</a>
+    {{ else }}<span></span>{{ end }}
+    <span class="font-mono text-xs text-muted">{{ $paginator.PageNumber }} / {{ $paginator.TotalPages }}</span>
+    {{ if $paginator.HasNext }}
+      <a href="{{ $paginator.Next.URL }}" class="rounded-xl border border-line bg-panel px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-accent hover:text-accent">Next</a>
+    {{ else }}<span></span>{{ end }}
+  </nav>
+{{ end }}

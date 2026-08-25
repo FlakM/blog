@@ -1,0 +1,33 @@
+{{ $currentPageUrl := .RelPermalink }}
+{{ range .GetTerms "series" }}
+  {{ $pages := sort .Pages "File.Path" }}
+  {{ if gt (len $pages) 1 }}
+    {{ $position := 0 }}
+    {{ range $index, $page := $pages }}
+      {{ if eq $page.RelPermalink $currentPageUrl }}{{ $position = add $index 1 }}{{ end }}
+    {{ end }}
+    {{ $headingID := printf "series-%s" (.LinkTitle | anchorize) }}
+    <nav class="mt-16 rounded-2xl border border-line bg-panel p-6 sm:p-8" aria-labelledby="{{ $headingID }}">
+      <div class="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-6">
+        <div>
+          <p class="font-mono text-xs uppercase tracking-[0.16em] text-accent">Part {{ $position }} of {{ len $pages }}</p>
+          <h2 id="{{ $headingID }}" class="mt-2 text-balance text-2xl font-black tracking-[-0.03em] text-ink-strong">
+            <a href="{{ .RelPermalink }}" class="transition-colors hover:text-accent">{{ .LinkTitle }}</a>
+          </h2>
+        </div>
+        <a href="{{ .RelPermalink }}" class="text-sm font-bold text-accent">View series</a>
+      </div>
+      <ol class="mt-5 space-y-2">
+        {{ range $index, $page := $pages }}
+          {{ $current := eq $page.RelPermalink $currentPageUrl }}
+          <li>
+            <a href="{{ $page.RelPermalink }}" class="group grid grid-cols-[2rem_1fr] items-start gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-accent-soft{{ if $current }} bg-panel-raised{{ end }}"{{ if $current }} aria-current="page"{{ end }}>
+              <span class="grid size-8 place-items-center rounded-full border font-mono text-xs font-bold {{ if $current }}border-accent bg-accent text-canvas{{ else }}border-line text-muted group-hover:border-accent group-hover:text-accent{{ end }}">{{ printf "%02d" (add $index 1) }}</span>
+              <span class="pt-1 text-sm font-semibold leading-relaxed {{ if $current }}text-ink-strong{{ else }}text-ink group-hover:text-accent{{ end }}">{{ $page.Title }}{{ if $current }} <span class="ml-2 font-mono text-[0.65rem] uppercase tracking-[0.12em] text-accent">Current</span>{{ end }}</span>
+            </a>
+          </li>
+        {{ end }}
+      </ol>
+    </nav>
+  {{ end }}
+{{ end }}

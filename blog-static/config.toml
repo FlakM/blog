@@ -13,7 +13,9 @@ enableEmoji = true
     pagerSize = 20
 
 [markup.highlight]
-style = "rrt"
+guessSyntax = true
+noClasses = false
+style = "catppuccin-latte"
 
 
 [markup]
@@ -56,14 +58,6 @@ style = "rrt"
 
   favicon = "images/favicon.ico"
 
-  colorScheme = "auto"
-  hidecolorschemetoggle = false
-  # Custom CSS and JS. Relative to /static/css and /static/js respectively.
-  customCSS = [ "css/custom.css" ]
-
-  
-
-
 [[params.social]]
     name = "Github"
     icon = "fa fa-github"
@@ -101,3 +95,11 @@ home = ["HTML", "RSS", "BlogListJSON"]
 [params.likes]
   enable = true
   apiBase = "/api"
+
+[params.discussions]
+  apiBase = "/api"
+
+[params.fediverse]
+  enable = true
+  domain = "fedi.flakm.com"
+  username = "blog"
