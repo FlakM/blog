@@ -39,6 +39,7 @@ pub struct FediverseRepository {
     pool: PgPool,
     domain: String,
     username: String,
+    blog_domain: String,
 }
 
 #[derive(Clone)]
@@ -186,11 +187,12 @@ impl TryFrom<ActorRow> for FediverseActor {
 }
 
 impl FediverseRepository {
-    pub fn new(pool: PgPool, domain: String, username: String) -> Self {
+    pub fn new(pool: PgPool, domain: String, username: String, blog_domain: String) -> Self {
         Self {
             pool,
             domain,
             username,
+            blog_domain,
         }
     }
 
@@ -342,7 +344,19 @@ pub struct Person {
     #[serde(rename = "type")]
     kind: String,
     preferred_username: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
     id: ObjectId<FediverseActor>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    url: Option<Url>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    icon: Option<Image>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    image: Option<Image>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    discoverable: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    indexable: Option<bool>,
     inbox: Url,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     endpoints: Option<Endpoints>,
@@ -351,6 +365,17 @@ pub struct Person {
     followers: Option<Url>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     summary: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Image {
+    #[serde(rename = "type")]
+    kind: String,
+    media_type: String,
+    url: Url,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -380,15 +405,50 @@ impl Object for FediverseActor {
         data.actor_by_id(&object_id).await
     }
 
-    async fn into_json(self, _data: &Data<Self::DataType>) -> Result<Self::Kind, Self::Error> {
+    async fn into_json(self, data: &Data<Self::DataType>) -> Result<Self::Kind, Self::Error> {
         let followers = self
             .local
             .then(|| actor_subresource_url(self.ap_id.inner(), "followers"))
             .transpose()?;
         Ok(Person {
-            kind: "Person".to_string(),
+            kind: if self.local { "Service" } else { "Person" }.to_string(),
             preferred_username: self.username.clone(),
+            name: self.local.then(|| "FlakM blog".to_string()),
             id: self.ap_id.clone(),
+            url: self
+                .local
+                .then(|| Url::parse(&format!("https://{}/", data.blog_domain)))
+                .transpose()?,
+            icon: self
+                .local
+                .then(|| {
+                    Ok::<_, url::ParseError>(Image {
+                        kind: "Image".to_string(),
+                        media_type: "image/jpeg".to_string(),
+                        url: Url::parse(&format!(
+                            "https://{}/images/avatar.jpg",
+                            data.blog_domain
+                        ))?,
+                        name: Some("Portrait of Maciek Flak".to_string()),
+                    })
+                })
+                .transpose()?,
+            image: self
+                .local
+                .then(|| {
+                    Ok::<_, url::ParseError>(Image {
+                        kind: "Image".to_string(),
+                        media_type: "image/png".to_string(),
+                        url: Url::parse(&format!(
+                            "https://{}/images/fediverse-header.png",
+                            data.blog_domain
+                        ))?,
+                        name: Some("FlakM blog homepage in its dark theme".to_string()),
+                    })
+                })
+                .transpose()?,
+            discoverable: self.local.then_some(true),
+            indexable: self.local.then_some(true),
             inbox: self.inbox.clone(),
             endpoints: self
                 .shared_inbox
@@ -396,7 +456,12 @@ impl Object for FediverseActor {
                 .map(|shared_inbox| Endpoints { shared_inbox }),
             public_key: self.public_key(),
             followers,
-            summary: self.local.then(|| "New posts from flakm.com".to_string()),
+            summary: self.local.then(|| {
+                format!(
+                    "<p>Technical notes by Maciek Flak about Rust, systems, observability, and the tools around them. Follow for new posts or browse the archive at <a href=\"https://{0}/\" rel=\"me\">{0}</a>.</p>",
+                    data.blog_domain
+                )
+            }),
         })
     }
 
@@ -542,6 +607,35 @@ struct Accept {
     id: Url,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateActor {
+    actor: ObjectId<FediverseActor>,
+    object: Person,
+    #[serde(rename = "type")]
+    kind: &'static str,
+    id: Url,
+}
+
+#[async_trait::async_trait]
+impl Activity for UpdateActor {
+    type DataType = FediverseRepository;
+    type Error = Error;
+
+    fn id(&self) -> &Url {
+        &self.id
+    }
+    fn actor(&self) -> &Url {
+        self.actor.inner()
+    }
+    async fn verify(&self, _data: &Data<Self::DataType>) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    async fn receive(self, _data: &Data<Self::DataType>) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
 #[async_trait::async_trait]
 impl Activity for Accept {
     type DataType = FediverseRepository;
@@ -594,6 +688,10 @@ struct Note {
     content: String,
     url: Url,
     published: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    updated: Option<DateTime<Utc>>,
+    icon: Image,
+    attachment: Vec<Image>,
     tag: Vec<Hashtag>,
 }
 
@@ -606,7 +704,7 @@ struct Hashtag {
 }
 
 #[derive(Debug, Serialize)]
-struct CreatePost {
+struct PostActivity {
     actor: ObjectId<FediverseActor>,
     to: Vec<Url>,
     object: Note,
@@ -616,7 +714,7 @@ struct CreatePost {
 }
 
 #[async_trait::async_trait]
-impl Activity for CreatePost {
+impl Activity for PostActivity {
     type DataType = FediverseRepository;
     type Error = Error;
 
@@ -636,6 +734,7 @@ impl Activity for CreatePost {
 
 fn note_for_post(actor: &FediverseActor, post: &HugoBlogPost) -> Result<Note, Error> {
     let id = actor_post_url(actor.ap_id.inner(), &post.slug)?;
+    let image = image_for_post(post)?;
     Ok(Note {
         kind: "Note",
         id: id.clone(),
@@ -649,6 +748,9 @@ fn note_for_post(actor: &FediverseActor, post: &HugoBlogPost) -> Result<Note, Er
         ),
         url: id,
         published: post.date,
+        updated: None,
+        icon: image.clone(),
+        attachment: vec![image],
         tag: post
             .tags
             .clone()
@@ -662,6 +764,36 @@ fn note_for_post(actor: &FediverseActor, post: &HugoBlogPost) -> Result<Note, Er
                 })
             })
             .collect::<Result<_, Error>>()?,
+    })
+}
+
+fn image_for_post(post: &HugoBlogPost) -> Result<Image, Error> {
+    let path = post
+        .featured_image
+        .as_deref()
+        .unwrap_or("/images/fediverse-post.png");
+    let url = match Url::parse(path) {
+        Ok(url) if matches!(url.scheme(), "http" | "https") => url,
+        _ => {
+            let mut base = post.url.clone();
+            base.set_path("/");
+            base.set_query(None);
+            base.set_fragment(None);
+            base.join(path.trim_start_matches('/'))?
+        }
+    };
+    let media_type = match url.path().rsplit('.').next() {
+        Some("gif") => "image/gif",
+        Some("jpg" | "jpeg") => "image/jpeg",
+        Some("svg") => "image/svg+xml",
+        Some("webp") => "image/webp",
+        _ => "image/png",
+    };
+    Ok(Image {
+        kind: "Image".to_string(),
+        media_type: media_type.to_string(),
+        url,
+        name: Some(post.title.clone()),
     })
 }
 
@@ -691,6 +823,79 @@ where
     Ok(())
 }
 
+pub async fn refresh_follower_profiles(
+    repository: FediverseRepository,
+    config: FederationConfig<FediverseRepository>,
+) {
+    let data = config.to_request_data();
+    let result: Result<(), Error> = async {
+        let actor = repository.local_actor().await?;
+        let inboxes = repository
+            .followers(&actor)
+            .await?
+            .iter()
+            .map(Actor::shared_inbox_or_inbox)
+            .collect::<Vec<_>>();
+        if inboxes.is_empty() {
+            return Ok(());
+        }
+        let activity = WithContext::new_default(UpdateActor {
+            actor: actor.ap_id.clone(),
+            object: actor.clone().into_json(&data).await?,
+            kind: "Update",
+            id: activity_url(data.domain())?,
+        });
+        send_activity(&activity, &actor, inboxes, &data).await?;
+        tracing::info!("Refreshed Fediverse profile metadata");
+        Ok(())
+    }
+    .await;
+    if let Err(error) = result {
+        tracing::warn!(%error, "Failed to refresh Fediverse profile metadata");
+    }
+}
+
+pub async fn refresh_post_media(
+    repository: FediverseRepository,
+    blog_repository: BlogRepository,
+    config: FederationConfig<FediverseRepository>,
+) {
+    let data = config.to_request_data();
+    let result: Result<(), Error> = async {
+        let actor = repository.local_actor().await?;
+        let inboxes = repository
+            .followers(&actor)
+            .await?
+            .iter()
+            .map(Actor::shared_inbox_or_inbox)
+            .collect::<Vec<_>>();
+        if inboxes.is_empty() {
+            return Ok(());
+        }
+        for post in blog_repository.fediverse_posts_without_media().await? {
+            let mut note = note_for_post(&actor, &post)?;
+            note.updated = Some(Utc::now());
+            let activity = WithContext::new_default(PostActivity {
+                actor: actor.ap_id.clone(),
+                to: note.to.clone(),
+                object: note,
+                kind: "Update",
+                id: activity_url(data.domain())?,
+            });
+            send_activity(&activity, &actor, inboxes.clone(), &data).await?;
+            blog_repository
+                .record_fediverse_media_refresh(&post.slug)
+                .await?;
+            tracing::info!(post_slug = %post.slug, "Added media to existing Fediverse post");
+        }
+        Ok(())
+    }
+    .await;
+    if let Err(error) = result {
+        tracing::warn!(%error, "Failed to refresh Fediverse post media");
+    }
+}
+
 pub async fn publish_new_posts(
     repository: FediverseRepository,
     blog_repository: BlogRepository,
@@ -708,7 +913,7 @@ pub async fn publish_new_posts(
             .collect::<Vec<_>>();
         for post in blog_repository.unpublished_fediverse_posts().await? {
             let note = note_for_post(&actor, &post)?;
-            let activity = WithContext::new_default(CreatePost {
+            let activity = WithContext::new_default(PostActivity {
                 actor: actor.ap_id.clone(),
                 to: note.to.clone(),
                 object: note,
@@ -992,6 +1197,11 @@ mod tests {
         assert!(note.content.contains("Rust &lt;and&gt; ActivityPub"));
         assert!(note.content.contains("Signed &amp; delivered"));
         assert!(note.content.contains("https://flakm.com/posts/rust-fedi/"));
+        assert_eq!(
+            note.icon.url.as_str(),
+            "https://flakm.com/images/fediverse-post.png"
+        );
+        assert_eq!(note.attachment, vec![note.icon.clone()]);
         assert_eq!(
             note.tag[0].href.as_str(),
             "https://flakm.com/tags/rust%20lang"

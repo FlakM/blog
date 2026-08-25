@@ -60,10 +60,12 @@ async fn main() -> Result<(), Error> {
         std::env::var("FEDIVERSE_DOMAIN").unwrap_or_else(|_| "fedi.flakm.com".to_string());
     let fediverse_username =
         std::env::var("FEDIVERSE_USERNAME").unwrap_or_else(|_| "blog".to_string());
+    let blog_domain = std::env::var("BLOG_DOMAIN").unwrap_or_else(|_| "flakm.com".to_string());
     let fediverse_repository = fediverse::FediverseRepository::new(
         pool.clone(),
         fediverse_domain.clone(),
         fediverse_username,
+        blog_domain,
     );
     let local_actor = fediverse_repository.ensure_local_actor().await?;
     fediverse_repository.backfill_discussion_links().await?;
@@ -82,6 +84,15 @@ async fn main() -> Result<(), Error> {
             blog_repo.clone(),
         ));
     }
+    tokio::spawn(fediverse::refresh_follower_profiles(
+        fediverse_repository.clone(),
+        fediverse_config.clone(),
+    ));
+    tokio::spawn(fediverse::refresh_post_media(
+        fediverse_repository.clone(),
+        blog_repo.clone(),
+        fediverse_config.clone(),
+    ));
     tokio::spawn(fediverse::publish_new_posts(
         fediverse_repository,
         blog_repo,

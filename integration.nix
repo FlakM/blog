@@ -244,7 +244,26 @@ in
     actor = json.loads(client.succeed(
         "curl -fsS -H 'Accept: application/activity+json' https://blog.local/blog"
     ))
+    assert actor["type"] == "Service"
     assert actor["preferredUsername"] == "blog"
+    assert actor["name"] == "FlakM blog"
+    assert actor["url"] == "https://blog.local/"
+    assert actor["icon"] == {
+        "type": "Image",
+        "mediaType": "image/jpeg",
+        "url": "https://blog.local/images/avatar.jpg",
+        "name": "Portrait of Maciek Flak",
+    }
+    assert actor["image"] == {
+        "type": "Image",
+        "mediaType": "image/png",
+        "url": "https://blog.local/images/fediverse-header.png",
+        "name": "FlakM blog homepage in its dark theme",
+    }
+    assert "Technical notes by Maciek Flak" in actor["summary"]
+    assert "https://blog.local/" in actor["summary"]
+    assert actor["discoverable"]
+    assert actor["indexable"]
     assert actor["inbox"] == "https://blog.local/blog/inbox"
 
     token = mastodon.succeed("cat /var/lib/mastodon/test-token").strip()
@@ -262,6 +281,13 @@ in
     )
     search = json.loads(client.succeed(search_command))
     blog_account = next(account for account in search["accounts"] if account["acct"] == "blog@blog.local")
+    assert blog_account["display_name"] == "FlakM blog"
+    assert blog_account["bot"]
+    assert blog_account["discoverable"]
+    assert blog_account["indexable"]
+    assert "Technical notes by Maciek Flak" in blog_account["note"]
+    assert not blog_account["avatar"].endswith("missing.png")
+    assert not blog_account["header"].endswith("missing.png")
     account_id = blog_account["id"]
 
     follow_command = (
@@ -297,6 +323,8 @@ in
         "| jq -e '.[] | select(.uri == \"https://blog.local/blog/posts/sqlx_caches_til\" and .url == \"https://blog.local/blog/posts/sqlx_caches_til\")'",
         timeout=60,
     ))
+    assert len(mastodon_status["media_attachments"]) == 1
+    assert mastodon_status["media_attachments"][0]["type"] == "image"
     anonymous_status_search = (
         "curl -sS -o /tmp/anonymous-status-search.json -w '%{http_code}' -G "
         "--data-urlencode 'q=https://blog.local/blog/posts/sqlx_caches_til' "
@@ -312,14 +340,10 @@ in
         status_search_command + " | jq -e '.statuses[] | select(.uri == \"https://blog.local/blog/posts/sqlx_caches_til\")'",
         timeout=60,
     ))
-    local_thread_url = (
-        "https://mastodon.local/@" + resolved_status["account"]["acct"] + "/" + resolved_status["id"]
+    interaction_url = (
+        "https://mastodon.local/authorize_interaction?uri="
+        "https%3A%2F%2Fblog.local%2Fblog%2Fposts%2Fsqlx_caches_til"
     )
-    assert local_thread_url.startswith("https://mastodon.local/@blog@blog.local/")
-    content_type = client.succeed(
-        "curl -fsSL -o /tmp/mastodon-thread.html -w '%{content_type}' '" + local_thread_url + "'"
-    )
-    assert content_type.startswith("text/html")
     discussion = json.loads(client.wait_until_succeeds(
         "curl -fsS https://blog.local/api/discussions/sqlx_caches_til "
         "| jq -e '.links[] | select(.source == \"mastodon\")'",
@@ -328,11 +352,11 @@ in
     assert discussion == {
         "source": "mastodon",
         "label": "Mastodon",
-        "url": local_thread_url,
+        "url": interaction_url,
     }
     server.succeed(
         "sudo -u postgres psql blog -tAc \"SELECT source || '|' || url FROM blog_post_discussion_links WHERE post_slug = 'sqlx_caches_til'\" "
-        "| grep -qx 'mastodon|" + local_thread_url + "'"
+        "| grep -qx 'mastodon|" + interaction_url + "'"
     )
     server.fail(
         "sudo -u postgres psql blog -v ON_ERROR_STOP=1 -c \"INSERT INTO blog_post_discussion_links "
@@ -368,7 +392,7 @@ in
     server.wait_for_open_port(3000)
     client.wait_until_succeeds(
         "curl -fsS https://blog.local/api/discussions/sqlx_caches_til "
-        "| jq -e --arg url '" + local_thread_url + "' '.links == [{\"source\":\"mastodon\",\"label\":\"Mastodon\",\"url\":$url}]'",
+        "| jq -e --arg url '" + interaction_url + "' '.links == [{\"source\":\"mastodon\",\"label\":\"Mastodon\",\"url\":$url}]'",
         timeout=60,
     )
 

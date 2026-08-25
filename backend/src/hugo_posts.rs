@@ -120,6 +120,14 @@ impl BlogRepository {
         .await
     }
 
+    pub async fn fediverse_posts_without_media(&self) -> Result<Vec<HugoBlogPost>, Error> {
+        sqlx::query_as::<_, HugoBlogPost>(
+            "SELECT b.title, b.slug, b.description, b.date, b.featured_image, b.tags, b.url FROM blog_posts b JOIN fediverse_published_posts f ON f.slug = b.slug WHERE f.media_refreshed_at IS NULL ORDER BY b.date",
+        )
+        .fetch_all(&self.db)
+        .await
+    }
+
     pub async fn record_fediverse_publication(
         &self,
         slug: &str,
@@ -140,12 +148,22 @@ impl BlogRepository {
         .execute(&mut *transaction)
         .await?;
         sqlx::query(
-            "INSERT INTO fediverse_published_posts (slug) VALUES ($1) ON CONFLICT (slug) DO NOTHING",
+            "INSERT INTO fediverse_published_posts (slug, media_refreshed_at) VALUES ($1, now()) ON CONFLICT (slug) DO NOTHING",
         )
         .bind(slug)
         .execute(&mut *transaction)
         .await?;
         transaction.commit().await?;
+        Ok(())
+    }
+
+    pub async fn record_fediverse_media_refresh(&self, slug: &str) -> Result<(), Error> {
+        sqlx::query(
+            "UPDATE fediverse_published_posts SET media_refreshed_at = now() WHERE slug = $1",
+        )
+        .bind(slug)
+        .execute(&self.db)
+        .await?;
         Ok(())
     }
 

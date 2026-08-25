@@ -121,6 +121,7 @@
                   "OTEL_RESOURCE_ATTRIBUTES" = "deployment.environment=production";
                   "FEDIVERSE_DOMAIN" = cfg.fediverse_domain;
                   "FEDIVERSE_USERNAME" = cfg.fediverse_username;
+                  "BLOG_DOMAIN" = cfg.domain;
                 } // optionalAttrs (cfg.preferred_mastodon_instance != null) {
                   "PREFERRED_MASTODON_INSTANCE" = cfg.preferred_mastodon_instance;
                 } // optionalAttrs (cfg.mastodon_access_token_file != null) {

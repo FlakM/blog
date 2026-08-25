@@ -1,0 +1,2 @@
+ALTER TABLE fediverse_published_posts
+ADD COLUMN media_refreshed_at TIMESTAMPTZ;
