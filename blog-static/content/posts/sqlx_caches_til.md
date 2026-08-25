@@ -1,5 +1,5 @@
 ---
-title: "SQLx caches prepared statements per connection"
+title: "Proving SQLx’s Statement Cache with bpftrace"
 date: 2026-08-24T11:39:24+02:00
 draft: false
 authors: ["Maciej Flak"]
@@ -8,7 +8,11 @@ description:
 tags: ["rust", "sqlx", "postgres", "bpftrace", "performance"]
 ---
 
-Today I learned that [`sqlx::query()`](https://docs.rs/sqlx/latest/sqlx/fn.query.html) prepares and caches SQL statements transparently. The cache belongs to each *connection*. A pool doesn't have one shared cache. It has one per connection. With `max_connections: 40`, a statement warm on one connection is still cold on the other 39.
+During the blissful one week off I spent without touching any AI assistants, I realized I'd stopped learning new things during regular paid work.
+
+Now my job requires me to work with the clankers, so I don't get to observe the APIs or hit my head against the invalid imagination of some gnarly problem.
+
+I decided to spend some time restarting the habit of writing down what I discover and, more importantly, how I prove it to myself. Let's start with some surprising optimization in sqlx
 
 Caching is on by default. With PostgreSQL, each connection keeps up to 100 statements in an LRU keyed by the SQL text. The capacity is configurable:
 
@@ -316,6 +320,14 @@ done    pid=1138669 duration_us=950
 ```
 
 The five loop iterations give me two misses and three hits. The final `pg_prepared_statements` query adds one more miss. Same cache behavior, this time without touching SQLx's private symbols.
+
+## What I've learned
+
+I've learned a couple of new things:
+
+- It's crucial to think about the shape of prepared statements - the additional round trip to the database isn't big, but it isn't free
+- Ustdts in codebases like postgres are cool, but with AI it's also easy to instrument the less polished codebases
+- Creating simple reproducers and tracing them with the same tools that can be used in production is a great way to learn and understand the systems
 
 ## Notes for reproducing this
 

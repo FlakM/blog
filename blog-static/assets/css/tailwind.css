@@ -104,10 +104,6 @@
     @apply text-[1.075rem] leading-[1.8] text-ink;
   }
 
-  .prose-blog > p:first-child {
-    @apply text-xl leading-[1.75] text-ink-strong sm:text-[1.32rem];
-  }
-
   .prose-blog p,
   .prose-blog ul,
   .prose-blog ol {
