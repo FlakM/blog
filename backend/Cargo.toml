@@ -33,6 +33,7 @@ ipnetwork = "0.21.1"
 sha2 = "0.11"
 hex = "0.4"
 base64 = "0.22"
+ammonia = "4.1"
 
 # Web server dependencies (conservative update)
 axum = { version = "0.8.9", features = ["json","query","tracing","tokio"] }

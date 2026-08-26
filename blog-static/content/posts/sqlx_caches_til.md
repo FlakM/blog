@@ -6,6 +6,7 @@ authors: ["Maciej Flak"]
 description:
     SQLx prepares and caches every query you run, transparently, in an LRU that belongs to the connection rather than the pool. This post traces the Postgres wire protocol with bpftrace to watch what is happening under the hood.
 tags: ["rust", "sqlx", "postgres", "bpftrace", "performance"]
+series: ["TIL"]
 ---
 
 During the blissful one week off I spent without touching any AI assistants, I realized I'd stopped learning new things during regular paid work.
@@ -220,7 +221,7 @@ Every new length costs an extra round trip. Once the cache has 100 entries, each
 
 ## Watching from PostgreSQL
 
-The Debian image includes PostgreSQL's USDT probes. The Alpine image doesn't. PostgreSQL's `statement__status` probe gives me the SQL text on Bind and Execute. I can correlate it by backend PID with the parse, plan, and execute probes:
+The Debian image includes PostgreSQL's USDT probes. PostgreSQL's `statement__status` probe gives me the SQL text on Bind and Execute. I can correlate it by backend PID with the parse, plan, and execute probes:
 
 ```bash
 PG_BIN="/proc/$(docker inspect -f '{{.State.Pid}}' pgcache-lab)/root/usr/lib/postgresql/16/bin/postgres"

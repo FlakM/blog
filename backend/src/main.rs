@@ -88,6 +88,10 @@ async fn main() -> Result<(), Error> {
         fediverse_repository.clone(),
         fediverse_config.clone(),
     ));
+    tokio::spawn(fediverse::refresh_reply_author_profiles(
+        fediverse_repository.clone(),
+        fediverse_config.clone(),
+    ));
     tokio::spawn(fediverse::refresh_post_media(
         fediverse_repository.clone(),
         blog_repo.clone(),

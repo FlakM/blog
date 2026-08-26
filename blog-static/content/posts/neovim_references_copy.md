@@ -2,6 +2,10 @@
 title: "Your Editor Can’t Do This (Unless It’s Good like Neovim)"
 date: 2025-11-13T12:51:50+01:00
 draft: false
+discussion_links:
+  - source: hacker_news
+    label: Hacker News
+    url: https://news.ycombinator.com/item?id=46244728
 ---
 
 ## Tell me your editor can do that!
@@ -82,4 +86,3 @@ I will not be touching tools that do not allow extensibility like this.
 Being a power user, to me, means shaping your tools instead of adapting to their limits.
 
 Let me know if you have any questions or suggestions - I'm always happy to discuss tooling and workflows!
-

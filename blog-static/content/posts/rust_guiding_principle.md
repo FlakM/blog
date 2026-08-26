@@ -5,6 +5,11 @@ draft: false
 tags: ["rust", "learning", "community"]
 authors: ["Maciej Flak"]
 
+discussion_links:
+  - source: hacker_news
+    label: Hacker News
+    url: https://news.ycombinator.com/item?id=42255721
+
 description: "How does a programming language inspire purpose? In this post, I share my journey of discovering rust's guiding principle—'empowering everyone to build reliable and efficient software'—and how it helped me uncover my own 'why.' From my unconventional start in technology to finding tools that align with my values, this story explores the profound connection between rust's philosophy and my growth as a developer. Along the way, I also highlight some of the best resources that make Rust accessible and empowering for everyone."
 
 images: [
@@ -166,4 +171,3 @@ It's evident that the rust community is aligned with the guiding principle of th
 I want to thank the rust community for making it easy to learn the language and for providing such a great resource from which to learn. You have empowered me to write reliable and efficient software in rust.
 
 PS: I'm sorry if I've missed some great resources. Please let me know, and I'll add them to the list or fire a MR to the [blog post](https://github.com/FlakM/blog/edit/master/blog-static/content/posts/rust_guiding_principle.md)
-

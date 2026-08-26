@@ -325,6 +325,17 @@ in
     ))
     assert len(mastodon_status["media_attachments"]) == 1
     assert mastodon_status["media_attachments"][0]["type"] == "image"
+    note = json.loads(client.succeed(
+        "curl -fsS -H 'Accept: application/activity+json' https://blog.local/blog/posts/sqlx_caches_til"
+    ))
+    assert note["replies"] == {
+        "type": "Collection",
+        "id": "https://blog.local/blog/posts/sqlx_caches_til/replies",
+    }
+    client.succeed(
+        "curl -fsS -H 'Accept: application/activity+json' https://blog.local/blog/posts/sqlx_caches_til/replies "
+        "| jq -e '.totalItems == 0 and .orderedItems == []'"
+    )
     anonymous_status_search = (
         "curl -sS -o /tmp/anonymous-status-search.json -w '%{http_code}' -G "
         "--data-urlencode 'q=https://blog.local/blog/posts/sqlx_caches_til' "
@@ -387,11 +398,39 @@ in
     ))
     reply_id = reply["id"]
     client.wait_until_succeeds(
-        "curl -fsS https://blog.local/api/discussions/sqlx_caches_til | jq -e '.replies == 1'",
+        "curl -fsS https://blog.local/api/discussions/sqlx_caches_til "
+        "| jq -e '.replies == 1 and (.reply_items | length == 1) and .reply_items[0].author == \"@alice@mastodon.local\" and .reply_items[0].author_name == \"alice\" and .reply_items[0].author_url == \"https://mastodon.local/@alice\" and (.reply_items[0] | has(\"avatar_url\")) and (.reply_items[0].content | contains(\"Reply from integration test\"))'",
         timeout=60,
+    )
+    direct_reply_uri = reply["uri"]
+    client.succeed(
+        "curl -fsS -H 'Accept: application/activity+json' https://blog.local/blog/posts/sqlx_caches_til/replies "
+        "| jq -e --arg reply '" + direct_reply_uri + "' '.totalItems == 1 and .orderedItems == [$reply]'"
     )
     server.succeed(
         "sudo -u postgres psql blog -tAc \"SELECT content LIKE '%Reply from integration test%' FROM fediverse_replies WHERE deleted_at IS NULL\" | grep -qx t"
+    )
+    nested_reply = json.loads(client.succeed(
+        "curl -fsS -X POST -H '" + authorization + "' "
+        "--data-urlencode 'status=@blog@blog.local Nested reply from integration test' "
+        "--data 'in_reply_to_id=" + reply_id + "' https://mastodon.local/api/v1/statuses"
+    ))
+    client.wait_until_succeeds(
+        "curl -fsS https://blog.local/api/discussions/sqlx_caches_til "
+        "| jq -e --arg parent '" + direct_reply_uri + "' '.replies == 2 and (.reply_items | length == 2) and any(.reply_items[]; .in_reply_to == $parent and (.content | contains(\"Nested reply from integration test\")))'",
+        timeout=60,
+    )
+    client.succeed(
+        "curl -fsS -H 'Accept: application/activity+json' https://blog.local/blog/posts/sqlx_caches_til/replies "
+        "| jq -e --arg reply '" + direct_reply_uri + "' '.totalItems == 1 and .orderedItems == [$reply]'"
+    )
+    client.succeed(
+        "curl -fsS -X DELETE -H '" + authorization + "' "
+        "https://mastodon.local/api/v1/statuses/" + nested_reply["id"]
+    )
+    client.wait_until_succeeds(
+        "curl -fsS https://blog.local/api/discussions/sqlx_caches_til | jq -e '.replies == 1'",
+        timeout=60,
     )
     client.succeed(
         "curl -fsS -X PUT -H '" + authorization + "' "
@@ -411,7 +450,7 @@ in
         timeout=60,
     )
     server.succeed(
-        "sudo -u postgres psql blog -tAc 'SELECT count(*) FROM fediverse_replies WHERE deleted_at IS NOT NULL' | grep -qx 1"
+        "sudo -u postgres psql blog -tAc 'SELECT count(*) FROM fediverse_replies WHERE deleted_at IS NOT NULL' | grep -qx 2"
     )
 
     private_reply = json.loads(client.succeed(
@@ -421,7 +460,7 @@ in
         "https://mastodon.local/api/v1/statuses"
     ))
     server.wait_until_succeeds(
-        "sudo -u postgres psql blog -tAc \"SELECT count(*) FROM fediverse_received_activities WHERE activity_type = 'Create'\" | grep -qx 2",
+        "sudo -u postgres psql blog -tAc \"SELECT count(*) FROM fediverse_received_activities WHERE activity_type = 'Create'\" | grep -qx 3",
         timeout=60,
     )
     server.fail(
@@ -443,7 +482,7 @@ in
     ))
     assert discussion == {
         "source": "mastodon",
-        "label": "Mastodon",
+        "label": "Reply on Hachyderm",
         "url": interaction_url,
     }
     server.succeed(
@@ -484,7 +523,7 @@ in
     server.wait_for_open_port(3000)
     client.wait_until_succeeds(
         "curl -fsS https://blog.local/api/discussions/sqlx_caches_til "
-        "| jq -e --arg url '" + interaction_url + "' '.links == [{\"source\":\"mastodon\",\"label\":\"Mastodon\",\"url\":$url}]'",
+        "| jq -e --arg url '" + interaction_url + "' '.links == [{\"source\":\"mastodon\",\"label\":\"Reply on Hachyderm\",\"url\":$url}]'",
         timeout=60,
     )
 

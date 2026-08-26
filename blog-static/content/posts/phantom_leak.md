@@ -4,6 +4,14 @@ date: 2024-08-05T06:38:59+02:00
 authors: ["Maciej Flak"]
 draft: false
 
+discussion_links:
+  - source: reddit
+    label: Reddit
+    url: https://www.reddit.com/r/rust/comments/1ekklj0/phantom_menance_memory_leak_that_wasnt_there/
+  - source: hacker_news
+    label: Hacker News
+    url: https://news.ycombinator.com/item?id=41161674
+
 images: [
     "/images/heaptrack_imaginator.png",
     ]

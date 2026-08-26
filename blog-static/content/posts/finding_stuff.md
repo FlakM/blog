@@ -9,6 +9,9 @@ tags = ["rust", "linux", "terminal"]
 categories = []
 mastodonName = "@flakm@hachyderm.io"
 toc = true
+discussion_links = [
+  { source = "hacker_news", label = "Hacker News", url = "https://news.ycombinator.com/item?id=39852127" },
+]
 
 images = [
     "/images/finding_stuff/feature.png"
@@ -266,4 +269,3 @@ Here is an [`asciinema`](https://asciinema.org/) recording comparing the output 
 {{< /unsafe >}}
 
 Notice how the `du` version took over 4 seconds on a single core, and the `dust` finished in 0.6 seconds and returned arguably more insightful information.
-

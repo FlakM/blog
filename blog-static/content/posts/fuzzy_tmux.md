@@ -2,6 +2,10 @@
 title: "Keeping all the balls on fire: tmux-fzf to the rescue 🔥"
 date: 2025-11-13T08:42:48+01:00
 draft: false
+discussion_links:
+  - source: reddit
+    label: Reddit
+    url: https://www.reddit.com/r/tmux/comments/1owq6hr/keeping_all_the_balls_on_fire_tmuxfzf_to_the/
 ---
 
 ## Speed isn’t the problem - stopping is

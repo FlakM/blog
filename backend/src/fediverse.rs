@@ -152,6 +152,9 @@ fn mastodon_instance_url(instance: &str) -> Result<Url, Error> {
 struct ActorRow {
     ap_id: String,
     username: String,
+    display_name: Option<String>,
+    profile_url: Option<String>,
+    avatar_url: Option<String>,
     inbox: String,
     shared_inbox: Option<String>,
     public_key: String,
@@ -163,6 +166,9 @@ struct ActorRow {
 #[derive(Clone, Debug)]
 pub struct FediverseActor {
     username: String,
+    display_name: Option<String>,
+    profile_url: Option<Url>,
+    avatar_url: Option<Url>,
     ap_id: ObjectId<Self>,
     inbox: Url,
     shared_inbox: Option<Url>,
@@ -178,6 +184,9 @@ impl TryFrom<ActorRow> for FediverseActor {
     fn try_from(row: ActorRow) -> Result<Self, Self::Error> {
         Ok(Self {
             username: row.username,
+            display_name: row.display_name,
+            profile_url: row.profile_url.map(|url| Url::parse(&url)).transpose()?,
+            avatar_url: row.avatar_url.map(|url| Url::parse(&url)).transpose()?,
             ap_id: Url::parse(&row.ap_id)?.into(),
             inbox: Url::parse(&row.inbox)?,
             shared_inbox: row.shared_inbox.map(|url| Url::parse(&url)).transpose()?,
@@ -205,7 +214,7 @@ impl FediverseRepository {
 
     async fn actor_by_id(&self, ap_id: &Url) -> Result<Option<FediverseActor>, Error> {
         sqlx::query_as::<_, ActorRow>(
-            "SELECT ap_id, username, inbox, shared_inbox, public_key, private_key, last_refreshed_at, local FROM fediverse_actors WHERE ap_id = $1",
+            "SELECT ap_id, username, display_name, profile_url, avatar_url, inbox, shared_inbox, public_key, private_key, last_refreshed_at, local FROM fediverse_actors WHERE ap_id = $1",
         )
         .bind(ap_id.as_str())
         .fetch_optional(&self.pool)
@@ -222,10 +231,13 @@ impl FediverseRepository {
 
     async fn save_actor(&self, actor: &FediverseActor) -> Result<(), Error> {
         sqlx::query(
-            "INSERT INTO fediverse_actors (ap_id, username, inbox, shared_inbox, public_key, private_key, last_refreshed_at, local) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (ap_id) DO UPDATE SET username = EXCLUDED.username, inbox = EXCLUDED.inbox, shared_inbox = EXCLUDED.shared_inbox, public_key = EXCLUDED.public_key, last_refreshed_at = EXCLUDED.last_refreshed_at WHERE NOT fediverse_actors.local",
+            "INSERT INTO fediverse_actors (ap_id, username, display_name, profile_url, avatar_url, inbox, shared_inbox, public_key, private_key, last_refreshed_at, local) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT (ap_id) DO UPDATE SET username = EXCLUDED.username, display_name = EXCLUDED.display_name, profile_url = EXCLUDED.profile_url, avatar_url = EXCLUDED.avatar_url, inbox = EXCLUDED.inbox, shared_inbox = EXCLUDED.shared_inbox, public_key = EXCLUDED.public_key, last_refreshed_at = EXCLUDED.last_refreshed_at WHERE NOT fediverse_actors.local",
         )
         .bind(actor.ap_id.inner().as_str())
         .bind(&actor.username)
+        .bind(&actor.display_name)
+        .bind(actor.profile_url.as_ref().map(Url::as_str))
+        .bind(actor.avatar_url.as_ref().map(Url::as_str))
         .bind(actor.inbox.as_str())
         .bind(actor.shared_inbox.as_ref().map(Url::as_str))
         .bind(&actor.public_key)
@@ -261,6 +273,9 @@ impl FediverseRepository {
         let keypair = generate_actor_keypair()?;
         let actor = FediverseActor {
             username: self.username.clone(),
+            display_name: None,
+            profile_url: None,
+            avatar_url: None,
             inbox: actor_subresource_url(&ap_id, "inbox")?,
             ap_id: ap_id.into(),
             shared_inbox: None,
@@ -330,7 +345,7 @@ impl FediverseRepository {
 
     async fn followers(&self, actor: &FediverseActor) -> Result<Vec<FediverseActor>, Error> {
         sqlx::query_as::<_, ActorRow>(
-            "SELECT a.ap_id, a.username, a.inbox, a.shared_inbox, a.public_key, a.private_key, a.last_refreshed_at, a.local FROM fediverse_actors a JOIN fediverse_followers f ON f.follower_actor_id = a.ap_id WHERE f.local_actor_id = $1 ORDER BY f.followed_at",
+            "SELECT a.ap_id, a.username, a.display_name, a.profile_url, a.avatar_url, a.inbox, a.shared_inbox, a.public_key, a.private_key, a.last_refreshed_at, a.local FROM fediverse_actors a JOIN fediverse_followers f ON f.follower_actor_id = a.ap_id WHERE f.local_actor_id = $1 ORDER BY f.followed_at",
         )
         .bind(actor.ap_id.inner().as_str())
         .fetch_all(&self.pool)
@@ -355,6 +370,40 @@ impl FediverseRepository {
                 .fetch_optional(&self.pool)
                 .await?,
         )
+    }
+
+    async fn reply_post_slug(&self, object: &Url) -> Result<Option<String>, Error> {
+        if let Some(slug) = self.published_post_slug(object).await? {
+            return Ok(Some(slug));
+        }
+        Ok(sqlx::query_scalar(
+            "SELECT post_slug FROM fediverse_replies WHERE object_id = $1 AND deleted_at IS NULL",
+        )
+        .bind(object.as_str())
+        .fetch_optional(&self.pool)
+        .await?)
+    }
+
+    async fn direct_reply_ids(&self, slug: &str, root: &Url) -> Result<Vec<Url>, Error> {
+        sqlx::query_scalar::<_, String>(
+            "SELECT object_id FROM fediverse_replies WHERE post_slug = $1 AND deleted_at IS NULL AND (in_reply_to = $2 OR in_reply_to IS NULL) ORDER BY published_at, object_id",
+        )
+        .bind(slug)
+        .bind(root.as_str())
+        .fetch_all(&self.pool)
+        .await?
+        .into_iter()
+        .map(|id| Url::parse(&id).map_err(Into::into))
+            .collect()
+    }
+
+    async fn reply_actor_ids(&self) -> Result<Vec<Url>, Error> {
+        sqlx::query_scalar::<_, String>("SELECT DISTINCT actor_id FROM fediverse_replies")
+            .fetch_all(&self.pool)
+            .await?
+            .into_iter()
+            .map(|id| Url::parse(&id).map_err(Into::into))
+            .collect()
     }
 
     async fn record_received(
@@ -440,7 +489,7 @@ impl FediverseRepository {
         note: &RemoteNote,
     ) -> Result<(), Error> {
         let slug = self
-            .published_post_slug(&note.in_reply_to)
+            .reply_post_slug(&note.in_reply_to)
             .await?
             .ok_or_else(|| anyhow::anyhow!("reply does not target a published local post"))?;
         let mut transaction = self.pool.begin().await?;
@@ -448,7 +497,7 @@ impl FediverseRepository {
             return Ok(());
         }
         sqlx::query(
-            "INSERT INTO fediverse_replies (object_id, create_activity_id, post_slug, actor_id, url, content, published_at) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (object_id) DO NOTHING",
+            "INSERT INTO fediverse_replies (object_id, create_activity_id, post_slug, actor_id, url, content, published_at, in_reply_to) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (object_id) DO NOTHING",
         )
         .bind(note.id.as_str())
         .bind(activity_id.as_str())
@@ -457,6 +506,7 @@ impl FediverseRepository {
         .bind(note.url.as_ref().unwrap_or(&note.id).as_str())
         .bind(&note.content)
         .bind(note.published.unwrap_or_else(Utc::now))
+        .bind(note.in_reply_to.as_str())
         .execute(&mut *transaction)
         .await?;
         transaction.commit().await?;
@@ -673,6 +723,9 @@ impl Object for FediverseActor {
     async fn from_json(json: Self::Kind, data: &Data<Self::DataType>) -> Result<Self, Self::Error> {
         let actor = Self {
             username: json.preferred_username,
+            display_name: json.name,
+            profile_url: json.url,
+            avatar_url: json.icon.map(|icon| icon.url),
             ap_id: json.id,
             inbox: json.inbox,
             shared_inbox: json.endpoints.map(|endpoints| endpoints.shared_inbox),
@@ -1037,7 +1090,7 @@ async fn verify_remote_note(
         return Err(anyhow::anyhow!("activity actor does not own reply").into());
     }
     verify_domains_match(&note.id, actor)?;
-    if data.published_post_slug(&note.in_reply_to).await?.is_none() {
+    if data.reply_post_slug(&note.in_reply_to).await?.is_none() {
         return Err(anyhow::anyhow!("reply does not target a published local post").into());
     }
     if require_updated && note.updated.is_none() {
@@ -1150,6 +1203,14 @@ struct Note {
     icon: Image,
     attachment: Vec<Image>,
     tag: Vec<Hashtag>,
+    replies: CollectionReference,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct CollectionReference {
+    #[serde(rename = "type")]
+    kind: &'static str,
+    id: Url,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -1203,7 +1264,7 @@ fn note_for_post(actor: &FediverseActor, post: &HugoBlogPost) -> Result<Note, Er
             escape_html(&post.description),
             escape_html(post.url.as_str())
         ),
-        url: id,
+        url: id.clone(),
         published: post.date,
         updated: None,
         icon: image.clone(),
@@ -1221,6 +1282,10 @@ fn note_for_post(actor: &FediverseActor, post: &HugoBlogPost) -> Result<Note, Er
                 })
             })
             .collect::<Result<_, Error>>()?,
+        replies: CollectionReference {
+            kind: "Collection",
+            id: actor_subresource_url(&id, "replies")?,
+        },
     })
 }
 
@@ -1309,6 +1374,26 @@ pub async fn refresh_follower_profiles(
     .await;
     if let Err(error) = result {
         tracing::warn!(%error, "Failed to refresh Fediverse profile metadata");
+    }
+}
+
+pub async fn refresh_reply_author_profiles(
+    repository: FediverseRepository,
+    config: FederationConfig<FediverseRepository>,
+) {
+    let data = config.to_request_data();
+    let actor_ids = match repository.reply_actor_ids().await {
+        Ok(actor_ids) => actor_ids,
+        Err(error) => {
+            tracing::warn!(%error, "Failed to load Fediverse reply authors");
+            return;
+        }
+    };
+    for actor_id in actor_ids {
+        let actor: ObjectId<FediverseActor> = actor_id.into();
+        if let Err(error) = actor.dereference(&data).await {
+            tracing::warn!(%error, actor = %actor.inner(), "Failed to refresh Fediverse reply author");
+        }
     }
 }
 
@@ -1457,6 +1542,7 @@ pub fn router(config: FederationConfig<FediverseRepository>) -> Router<PgPool> {
         .route("/{user}/inbox", post(post_inbox))
         .route("/{user}/followers", get(get_followers))
         .route("/{user}/posts/{slug}", get(get_post))
+        .route("/{user}/posts/{slug}/replies", get(get_post_replies))
         .layer(FederationMiddleware::new(config))
 }
 
@@ -1606,6 +1692,37 @@ async fn get_post(
     Ok(FederationJson(WithContext::new_default(note)))
 }
 
+async fn get_post_replies(
+    Path((name, slug)): Path<(String, String)>,
+    data: Data<FediverseRepository>,
+) -> Result<FederationJson<WithContext<FollowersCollection>>, StatusCode> {
+    if name != data.username {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    let actor = data.local_actor().await.map_err(internal_error)?;
+    let root = actor_post_url(actor.ap_id.inner(), &slug).map_err(internal_error)?;
+    if data
+        .published_post_slug(&root)
+        .await
+        .map_err(internal_error)?
+        .is_none()
+    {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    let replies = data
+        .direct_reply_ids(&slug, &root)
+        .await
+        .map_err(internal_error)?;
+    Ok(FederationJson(WithContext::new_default(
+        FollowersCollection {
+            kind: "OrderedCollection",
+            id: actor_subresource_url(&root, "replies").map_err(internal_error)?,
+            total_items: replies.len(),
+            ordered_items: replies,
+        },
+    )))
+}
+
 fn internal_error(error: Error) -> StatusCode {
     tracing::error!(%error, "Fediverse request failed");
     StatusCode::INTERNAL_SERVER_ERROR
@@ -1668,6 +1785,9 @@ mod tests {
         let ap_id = Url::parse("https://fedi.flakm.com/blog").unwrap();
         FediverseActor {
             username: "blog".to_string(),
+            display_name: None,
+            profile_url: None,
+            avatar_url: None,
             inbox: actor_subresource_url(&ap_id, "inbox").unwrap(),
             ap_id: ap_id.into(),
             shared_inbox: None,

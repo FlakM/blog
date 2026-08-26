@@ -180,7 +180,7 @@ impl BlogRepository {
         .execute(&mut *transaction)
         .await?;
         sqlx::query(
-            "INSERT INTO blog_post_discussion_links (post_slug, source, label, url) VALUES ($1, 'mastodon', 'Mastodon', $2)",
+            "INSERT INTO blog_post_discussion_links (post_slug, source, label, url) VALUES ($1, 'mastodon', 'Reply on Hachyderm', $2)",
         )
         .bind(slug)
         .bind(thread_url.as_str())

@@ -21,6 +21,12 @@
             <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
             {{ .ReadingTime }} min read
           </span>
+          {{ $slug := .File.TranslationBaseName }}
+          {{ with .Params.slug }}{{ $slug = . }}{{ end }}
+          <a href="#discussion-section-{{ $slug }}" class="inline-flex items-center gap-2 transition-colors hover:text-accent">
+            <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/></svg>
+            Discuss
+          </a>
         </div>
         <div class="mt-5 flex flex-wrap gap-2">
           {{ range .GetTerms "tags" }}

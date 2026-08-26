@@ -258,6 +258,75 @@ class BlogE2ETests:
         # Verify button returns to normal state
         final_button_text = await like_button.text_content()
         assert "Like" in final_button_text, f"Expected button to return to 'Like' state, got: {final_button_text}"
+
+    async def test_fediverse_replies_render_as_thread(self):
+        """Test that public Fediverse replies render as a nested thread."""
+        cprint("Testing Fediverse reply rendering...", "blue")
+
+        root_id = "https://social.example/users/alice/statuses/1"
+        child_id = "https://social.example/users/bob/statuses/2"
+        payload = {
+            "links": [],
+            "replies": 2,
+            "boosts": 1,
+            "reply_items": [
+                {
+                    "id": root_id,
+                    "url": root_id,
+                    "in_reply_to": None,
+                    "author": "@alice@social.example",
+                    "author_name": "Alice Example",
+                    "author_url": "https://social.example/@alice",
+                    "avatar_url": "https://social.example/avatars/alice.png",
+                    "content": '<p>Root reply with <a href="https://example.com">a link</a></p>',
+                    "published_at": "2026-08-25T10:00:00Z",
+                    "updated_at": None,
+                },
+                {
+                    "id": child_id,
+                    "url": child_id,
+                    "in_reply_to": root_id,
+                    "author": "@bob@social.example",
+                    "author_name": "Bob Example",
+                    "author_url": "https://social.example/@bob",
+                    "avatar_url": None,
+                    "content": "<p>Nested edited reply</p>",
+                    "published_at": "2026-08-25T10:05:00Z",
+                    "updated_at": "2026-08-25T10:06:00Z",
+                },
+            ],
+        }
+
+        async def fulfill_discussion(route):
+            await route.fulfill(json=payload)
+
+        pattern = "**/api/discussions/automate_boring_stuff"
+        await self.page.route(pattern, fulfill_discussion)
+        try:
+            await self.page.goto(f"{self.base_url}/posts/automate_boring_stuff")
+            section = self.page.locator("[data-discussion-section]")
+            await section.wait_for(state="visible")
+            await self.page.wait_for_function(
+                "!document.querySelector('[data-discussion-section]').hasAttribute('aria-busy')"
+            )
+            discuss_link = self.page.get_by_role("link", name="Discuss", exact=True)
+            assert await discuss_link.get_attribute("href") == "#discussion-section-automate_boring_stuff"
+
+            root = section.locator(f'[data-reply-id="{root_id}"]')
+            child = section.locator(f'[data-reply-id="{child_id}"]')
+            assert await root.locator(":scope > ol > li").count() == 1, "nested reply is not attached to its parent"
+            assert await root.get_by_text("Alice Example", exact=True).count() == 1, "display name is missing"
+            assert await root.get_by_text("@alice@social.example", exact=True).count() == 1, "Fediverse handle is missing"
+            assert await root.locator("article > a img").get_attribute("src") == "https://social.example/avatars/alice.png", "remote avatar is missing"
+            assert await child.get_by_text("Edited", exact=True).count() == 1, "edited marker is missing"
+            assert await child.locator("article > a span").text_content() == "B", "fallback avatar is missing"
+            assert await root.locator(".prose a").get_attribute("rel") == "nofollow ugc noopener noreferrer", "reply link rel is unsafe"
+            assert await section.locator("[data-reply-count]").text_content() == "2 replies"
+            assert await section.locator("[data-boost-count]").text_content() == "1 boost"
+        finally:
+            await self.page.unroute(pattern, fulfill_discussion)
+
+        cprint("✓ Fediverse replies render as a nested thread", "green")
     
     async def test_responsive_design(self):
         """Test like button functionality on different viewport sizes."""
@@ -371,6 +440,7 @@ async def run_browser_e2e_tests(server, client):
         await tests.test_like_count_loads()
         await tests.test_like_button_interaction()
         await tests.test_javascript_error_handling()
+        await tests.test_fediverse_replies_render_as_thread()
         await tests.test_responsive_design()
         await tests.test_user_journey_multiple_interactions()
         
@@ -431,6 +501,7 @@ async def main():
         await tests.test_like_count_loads()
         await tests.test_like_button_interaction()
         await tests.test_javascript_error_handling()
+        await tests.test_fediverse_replies_render_as_thread()
         await tests.test_responsive_design()
         await tests.test_user_journey_multiple_interactions()
         
