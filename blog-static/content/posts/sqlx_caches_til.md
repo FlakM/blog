@@ -7,6 +7,10 @@ description:
     SQLx prepares and caches every query you run, transparently, in an LRU that belongs to the connection rather than the pool. This post traces the Postgres wire protocol with bpftrace to watch what is happening under the hood.
 tags: ["rust", "sqlx", "postgres", "bpftrace", "performance"]
 series: ["TIL"]
+discussion_links:
+  - source: reddit
+    label: Reddit
+    url: https://www.reddit.com/r/rust/comments/1vyvvz9/sqlx_statement_caching_verified_with_bpftrace/
 ---
 
 During the blissful one week off I spent without touching any AI assistants, I realized I'd stopped learning new things during regular paid work.
