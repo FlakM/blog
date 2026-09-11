@@ -230,11 +230,11 @@ pg_advisory_lock_int8(PG_FUNCTION_ARGS)
 #define PG_GETARG_INT64(n) DatumGetInt64(PG_GETARG_DATUM(n))
 ```
 
-On x86-64, bpftrace exposes the first C argument as `arg0`, so `arg0` is the `fcinfo` pointer, not the lock key itself. The key lives in `fcinfo->args[0].value`.
+On x86-64, bpftrace exposes the first C argument as `arg0`, so `arg0` is the `fcinfo` pointer, not the lock key itself. The lock key can be located in `fcinfo->args[0].value`.
 
-The remaining question is where `args` begins in memory. I could add up the sizes of the fields before it, but the compiler may insert padding to keep them aligned. The standard C `offsetof(Type, field)` macro does that calculation correctly.
+Now we need to figure out where `args` begins in memory. The standard C `offsetof(Type, field)` macro does that calculation correctly.
 
-This tiny program includes PostgreSQL's structure definition and asks: "How many bytes are there between the start of `FunctionCallInfoBaseData` and its `args` field?"
+Below the program includes the postgres headers and answers: "How many bytes are there between the start of `FunctionCallInfoBaseData` and its `args` field?"
 
 ```c
 #include "postgres.h"
@@ -261,9 +261,10 @@ cc -I"$(pg_config --includedir-server)" /tmp/fcinfo_offset.c -o /tmp/fcinfo_offs
 args starts at byte 32
 ```
 
-The program is not reading a live PostgreSQL process. It is letting the C compiler lay out the structure exactly as PostgreSQL's headers describe it. The output means that, given a pointer to the start of `fcinfo`, its `args` array begins 32 bytes later.
 
-The `args` field is an array with one `NullableDatum` for every SQL argument. PostgreSQL defines each element like this:
+The program reads the exact same structure the binary is using and tells us that if we are given a pointer to the start of `fcinfo`, its `args` array begins 32 bytes later. This is the offset we were looking for.
+
+The `args` field is an array with one `NullableDatum` for every SQL argument. They are defined as follows:
 
 ```c
 typedef struct NullableDatum
@@ -273,21 +274,26 @@ typedef struct NullableDatum
 } NullableDatum;
 ```
 
-`Datum` is PostgreSQL's generic container for a SQL value. It is large enough to hold either a small value directly or a pointer to a larger value. The separate `isnull` flag is needed because SQL `NULL` is not an ordinary value.
+`Datanum` is a container for sql values. It can contain a value directly or a pointer to larger value like a string. `args[0]` is the first element of that array, and its `value` field contains the lock key - it starts at the same byte as `args[0]` because it is the first field in the struct. 
 
-For `pg_advisory_lock(5784863001)`, `args[0]` represents the first SQL argument. On this 64-bit build its `value` field contains the `bigint` key directly. Because `value` is the first field in `NullableDatum`, it adds no extra offset: `args[0].value` starts at the same byte as `args[0]`, which is byte 32 in `fcinfo`.
-
-Now the strange-looking line is just a translation of PostgreSQL's own `PG_GETARG_INT64(0)`:
+Now the the line that reads the lock key from the `fcinfo` pointer is:
 
 ```bpftrace
 @key[tid] = *(int64*)uptr(arg0 + 32);
 ```
 
-Starting at the `fcinfo` address in `arg0`, it moves 32 bytes to `args[0].value`, marks that address as a userspace pointer with `uptr`, reads the eight-byte lock key as an `int64`, and stores it under the current thread ID. The matching return probe uses that thread ID to find the right key when several PostgreSQL backends run at once.
+Starting at the `fcinfo` address in `arg0`, it:
+
+1. moves 32 bytes to `args[0].value`
+2. marks that address as a userspace pointer with `uptr`
+3. reads the eight-byte lock key as an `int64`
+4. stores it under the current thread ID. 
+
+The matching return probe uses that thread ID to be sure to not collide if multiple postgress processes are running.
 
 Finally, `@t0[tid] = nsecs` remembers when the function was entered. The return probe subtracts it from the current time, which tells us how long a blocking `pg_advisory_lock` waited before it acquired the lock.
 
-The `32` is not a stable PostgreSQL API. It belongs to this PostgreSQL 16, 64-bit structure layout.
+The number `32` we have just calculated is not a stable pg API. It belongs to this PostgreSQL 16, 64-bit structure layout on linux.
 
 {{< /details >}}
 
@@ -398,7 +404,7 @@ run_once(&mut lock_conn, || async move { backfill_users(work_pool).await }).awai
 
 Every replica may call `run_once`. The first one gets `Either::Left` with a guard and runs the migration. The others get `Either::Right` and return `false` immediately - someone else is already holding the lock.
 
-`Acquire` abstracts where the connection comes from: either a pool or an existing connection. Because `A::Database` is `Postgres`, it guarantees that the acquired value dereferences to `PgConnection`; `&mut *conn` borrows that concrete connection for the lock guard. The migration closure can use a separate pool while the acquired connection remains borrowed for the lock's lifetime.
+`Acquire` is the abstraction over the way we obtain the connection: from either database connection pool or a single connection. Because `A::Database` is `Postgres`, it guarantees that the acquired value dereferences to `PgConnection`; `&mut *conn` borrows that concrete connection for the lock guard. The migration closure can use a separate pool while the acquired connection remains borrowed for the lock's lifetime.
 
 
 Every 30 seconds, `PgConnection::ping` sends a PostgreSQL protocol `Sync` message on that connection. 
