@@ -202,6 +202,23 @@
     tab-size: 2;
   }
 
+  .prose-blog .code-grid {
+    @apply my-8 grid gap-5 lg:grid-cols-2;
+  }
+
+  @media (min-width: 64rem) {
+    .prose-blog .code-grid {
+      position: relative;
+      left: 50%;
+      width: min(72rem, calc(100vw - 4rem));
+      transform: translateX(-50%);
+    }
+  }
+
+  .prose-blog .code-grid .code-frame {
+    @apply my-0 min-w-0;
+  }
+
   .prose-blog pre code,
   .prose-blog .highlight code {
     @apply border-0 bg-transparent p-0 font-mono text-inherit;
@@ -389,6 +406,105 @@
 
   .prose-blog .danger {
     @apply border-l-danger;
+  }
+
+  .prose-blog .technical-details {
+    @apply my-8 overflow-hidden rounded-xl border border-line bg-panel shadow-sm;
+  }
+
+  .prose-blog .technical-details > summary {
+    @apply flex cursor-pointer select-none items-center gap-3 px-5 py-4 font-mono text-sm font-bold text-accent transition-colors hover:bg-accent-soft sm:px-6;
+    list-style: none;
+  }
+
+  .prose-blog .technical-details > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .prose-blog .technical-details > summary::before {
+    content: ">";
+    @apply grid size-7 shrink-0 place-items-center rounded-full bg-accent-soft text-base transition-transform;
+  }
+
+  .prose-blog .technical-details > summary::after {
+    content: "Show";
+    @apply ml-auto rounded-full border border-accent/30 px-2.5 py-0.5 text-[0.7rem] uppercase tracking-wider;
+  }
+
+  .prose-blog .technical-details[open] > summary {
+    @apply border-b border-line bg-panel-raised;
+  }
+
+  .prose-blog .technical-details[open] > summary::before {
+    transform: rotate(90deg);
+  }
+
+  .prose-blog .technical-details[open] > summary::after {
+    content: "Hide";
+  }
+
+  .prose-blog .technical-details > div {
+    @apply px-5 pb-2 pt-1 sm:px-7;
+  }
+
+  .like-rail {
+    display: none;
+  }
+
+  @media (min-width: 88rem) {
+    .like-rail {
+      position: fixed;
+      right: 1.5rem;
+      bottom: 1.5rem;
+      z-index: 20;
+      display: block;
+      width: 5.5rem;
+    }
+
+  }
+
+  .like-celebration {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    pointer-events: none;
+    animation: like-celebration-fade 2.6s ease both;
+  }
+
+  .like-celebration[hidden] {
+    display: none;
+  }
+
+  .like-celebration-heart {
+    font-size: clamp(7rem, 18vw, 13rem);
+    line-height: 1;
+    animation: like-heart-grow 2.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  @keyframes like-heart-grow {
+    0% { transform: scale(0.2); }
+    35% { transform: scale(1.1); }
+    55% { transform: scale(1); }
+    100% { transform: scale(1.2); }
+  }
+
+  @keyframes like-celebration-fade {
+    0% { opacity: 0; }
+    15%, 75% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .like-celebration,
+    .like-celebration-heart {
+      animation: none;
+    }
   }
 
   .like-message.success {
