@@ -7,6 +7,11 @@ description:
     How to simplify migrations thanks to postgres advisory locks using rust and sqlx. Observing the locks with bpftrace.
 tags: ["rust", "sqlx", "postgres"]
 series: ["TIL"]
+discussion_links:
+  - source: reddit
+    url: https://www.reddit.com/r/rust/comments/1wf418y/til_one_lock_to_rule_them_all/
+  - source: hacker_news
+    url: https://news.ycombinator.com/item?id=49682339
 ---
 
 I have been doing a lot of byte shoveling lately... Stuff that we've always postponed because it wasn't realistic to spend a couple of days on. Now it's faster and easier to finish those cleanup scripts and finally get rid of those legacy tables and databases.
