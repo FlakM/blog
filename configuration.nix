@@ -46,13 +46,22 @@
   # Daily upgrade from the public flake, so security fixes land without a
   # manual deploy. `submodules=1` is required: the Hugo theme
   # (blog-static/themes/hugo-coder) is a git submodule and is not included in
-  # a plain github: tarball. nixpkgs is pinned by flake.lock, so package
-  # updates arrive when the lock is bumped and pushed.
+  # a plain github: tarball.
+  #
+  # nixpkgs is refreshed in-memory on every run: `--update-input nixpkgs`
+  # resolves the latest nixos-26.05 branch head and `--no-write-lock-file`
+  # stops Nix from trying to rewrite the lock of the read-only GitHub flake
+  # source. The committed flake.lock is only the baseline for every other
+  # input.
   system.autoUpgrade = {
     enable = true;
     operation = "switch";
     flake = "git+https://github.com/FlakM/blog?submodules=1#blog";
-    flags = [ "-L" ];
+    flags = [
+      "-L"
+      "--update-input" "nixpkgs"
+      "--no-write-lock-file"
+    ];
     dates = "04:00";
     randomizedDelaySec = "10min";
     # Kernel/initrd changes need a reboot; keep it inside a quiet window.
