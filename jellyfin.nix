@@ -160,7 +160,9 @@ in
         http2 = true;
 
         extraConfig = ''
-          client_max_body_size 500M;
+          # match the internal vhost on odroid (hosts/odroid/audiobookshelf.nix);
+          # audiobooks routinely exceed the 500M that was here before
+          client_max_body_size 2G;
           ssl_protocols TLSv1.3 TLSv1.2;
 
           proxy_headers_hash_max_size 1024;

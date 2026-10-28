@@ -180,6 +180,15 @@ resource "cloudflare_dns_record" "audiobookshelf_public_nginx" {
   proxied = false
 }
 
+resource "cloudflare_dns_record" "ntfy_public_nginx" {
+  zone_id = var.ZONE_ID
+  name    = "ntfy.public.flakm.com"
+  content = hcloud_server.blog.ipv4_address
+  type    = "A"
+  ttl     = 300
+  proxied = false
+}
+
 resource "cloudflare_dns_record" "portal_nginx" {
   zone_id = var.ZONE_ID
   name    = "portal.flakm.com"

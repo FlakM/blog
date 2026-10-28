@@ -37,6 +37,19 @@ document.querySelectorAll("[data-copy-code]").forEach((button) => {
   });
 });
 
+document.querySelectorAll(".prose-blog .code-frame").forEach((frame) => {
+  if (frame.closest(".code-grid")) return;
+
+  const next = frame.nextElementSibling;
+  const lineCount = (element) => element.querySelector("code")?.innerText.trimEnd().split("\n").length ?? Infinity;
+  if (!next?.matches(".code-frame") || lineCount(frame) > 8 || lineCount(next) > 8) return;
+
+  const grid = document.createElement("div");
+  grid.className = "code-grid";
+  frame.before(grid);
+  grid.append(frame, next);
+});
+
 document.querySelectorAll("[data-copy-fediverse]").forEach((button) => {
   button.addEventListener("click", async () => {
     const label = button.querySelector("[data-fediverse-copy-label]");

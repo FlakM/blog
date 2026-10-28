@@ -1,6 +1,7 @@
 {{ $result := transform.HighlightCodeBlock . }}
 {{ $language := .Type | default "text" }}
 {{ $title := index .Attributes "title" }}
+{{ $source := index .Attributes "source" }}
 {{ $terminalLanguages := slice "ansi" "bash" "console" "fish" "powershell" "sh" "shell" "shellsession" "zsh" }}
 <figure class="code-frame">
   <figcaption class="flex h-11 items-center justify-between border-b border-black/5 px-4 dark:border-white/10">
@@ -10,11 +11,15 @@
         <span class="size-2 rounded-full bg-[#df8e1d] dark:bg-[#f9e2af]"></span>
         <span class="size-2 rounded-full bg-[#40a02b] dark:bg-[#a6e3a1]"></span>
       </span>
-      {{ with $title }}
-        <span class="truncate font-mono text-[0.72rem] font-semibold text-[#5c5f77] dark:text-[#a6adc8]">{{ . }}</span>
+      {{ if $source }}
+        <a href="{{ $source | safeURL }}" class="truncate font-mono text-[0.72rem] font-semibold text-[#5c5f77] hover:text-[#4c4f69] dark:text-[#a6adc8] dark:hover:text-[#cdd6f4]">{{ $title | default "View source" }}</a>
       {{ else }}
-        {{ if in $terminalLanguages $language }}
-          <span class="font-mono text-[0.72rem] font-semibold text-[#5c5f77] dark:text-[#a6adc8]">Terminal</span>
+        {{ with $title }}
+          <span class="truncate font-mono text-[0.72rem] font-semibold text-[#5c5f77] dark:text-[#a6adc8]">{{ . }}</span>
+        {{ else }}
+          {{ if in $terminalLanguages $language }}
+            <span class="font-mono text-[0.72rem] font-semibold text-[#5c5f77] dark:text-[#a6adc8]">Terminal</span>
+          {{ end }}
         {{ end }}
       {{ end }}
     </div>

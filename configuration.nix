@@ -7,6 +7,7 @@
     backend.nixosModules.x86_64-linux.default
     static.nixosModules.x86_64-linux.default
     ./jellyfin.nix
+    ./ntfy.nix
   ];
 
   # Sops configuration for secrets management
@@ -40,6 +41,26 @@
     automatic = true;
     dates = "weekly";
     options = "--delete-older-than 10d";
+  };
+
+  # Daily upgrade from the public flake, so security fixes land without a
+  # manual deploy. `submodules=1` is required: the Hugo theme
+  # (blog-static/themes/hugo-coder) is a git submodule and is not included in
+  # a plain github: tarball. nixpkgs is pinned by flake.lock, so package
+  # updates arrive when the lock is bumped and pushed.
+  system.autoUpgrade = {
+    enable = true;
+    operation = "switch";
+    flake = "git+https://github.com/FlakM/blog?submodules=1#blog";
+    flags = [ "-L" ];
+    dates = "04:00";
+    randomizedDelaySec = "10min";
+    # Kernel/initrd changes need a reboot; keep it inside a quiet window.
+    allowReboot = true;
+    rebootWindow = {
+      lower = "04:00";
+      upper = "05:00";
+    };
   };
 
 
@@ -176,6 +197,13 @@
             ];
             start_at = "end";
           };
+          "filelog/ntfy-nginx" = {
+            include = [
+              "/var/log/nginx/ntfy_access.log"
+              "/var/log/nginx/ntfy_error.log"
+            ];
+            start_at = "end";
+          };
         };
 
         processors = {
@@ -253,6 +281,25 @@
               }
             ];
           };
+          "resource/ntfy-proxy" = {
+            attributes = [
+              {
+                key = "service.name";
+                value = "nginx";
+                action = "upsert";
+              }
+              {
+                key = "service.instance.id";
+                value = "ntfy-proxy";
+                action = "upsert";
+              }
+              {
+                key = "deployment.environment";
+                value = "production";
+                action = "upsert";
+              }
+            ];
+          };
         };
 
         exporters = {
@@ -274,6 +321,13 @@
             domain = "eu2.coralogix.com";
             private_key = "\${CORALOGIX_PRIVATE_KEY}";
             application_name = "jellyfin";
+            subsystem_name = "nginx-proxy";
+            timeout = "30s";
+          };
+          "coralogix/ntfy-proxy" = {
+            domain = "eu2.coralogix.com";
+            private_key = "\${CORALOGIX_PRIVATE_KEY}";
+            application_name = "ntfy";
             subsystem_name = "nginx-proxy";
             timeout = "30s";
           };
@@ -305,6 +359,11 @@
               receivers = [ "filelog/jellyfin-nginx" ];
               processors = [ "resource/jellyfin-proxy" "transform/log_body_object" "batch" ];
               exporters = [ "coralogix/jellyfin-proxy" ];
+            };
+            "logs/ntfy-proxy" = {
+              receivers = [ "filelog/ntfy-nginx" ];
+              processors = [ "resource/ntfy-proxy" "transform/log_body_object" "batch" ];
+              exporters = [ "coralogix/ntfy-proxy" ];
             };
           };
         };
@@ -407,6 +466,7 @@
       "tata.flakm.com".email = "me@flakm.com";
       "jellyfin.public.flakm.com".email = "me@flakm.com";
       "audiobookshelf.public.flakm.com".email = "me@flakm.com";
+      "ntfy.public.flakm.com".email = "me@flakm.com";
     };
   };
 
