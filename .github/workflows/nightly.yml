@@ -34,6 +34,13 @@ jobs:
       # The host refreshes nixpkgs with the same override on every
       # autoUpgrade run. This job is the canary that catches a broken
       # latest nixos-26.05 before/while the server tries it.
+      - name: Build the blog host against latest nixos-26.05
+        run: |
+          nix build --print-build-logs --refresh \
+            --override-input nixpkgs github:NixOS/nixpkgs/nixos-26.05 \
+            --no-write-lock-file \
+            '.#nixosConfigurations.blog.config.system.build.toplevel'
+
       - name: Check project against latest nixos-26.05
         run: |
           nix flake check --print-build-logs --refresh \
