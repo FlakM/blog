@@ -1,0 +1,47 @@
+name: Nightly
+
+on:
+  schedule:
+    # 01:00 UTC, three hours before the host's autoUpgrade window.
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  latest-nixpkgs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Enable KVM
+        run: |
+          test -e /dev/kvm
+          sudo chmod 666 /dev/kvm
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # The host refreshes nixpkgs with the same override on every
+      # autoUpgrade run. This job is the canary that catches a broken
+      # latest nixos-26.05 before/while the server tries it.
+      - name: Check project against latest nixos-26.05
+        run: |
+          nix flake check --print-build-logs --refresh \
+            --override-input nixpkgs github:NixOS/nixpkgs/nixos-26.05 \
+            --no-write-lock-file
+
+      - name: Check static site against latest nixos-26.05
+        run: |
+          nix flake check ./blog-static --print-build-logs --refresh \
+            --override-input nixpkgs github:NixOS/nixpkgs/nixos-26.05 \
+            --no-write-lock-file
