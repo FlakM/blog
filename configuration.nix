@@ -8,6 +8,7 @@
     static.nixosModules.x86_64-linux.default
     ./jellyfin.nix
     ./ntfy.nix
+    ./ssologin-demo/host.nix
   ];
 
   # Sops configuration for secrets management

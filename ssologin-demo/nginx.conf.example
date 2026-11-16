@@ -1,0 +1,47 @@
+# Standalone nginx for the ssologin demo listener.
+#
+# NixOS users: services.ssologinDemo.nginx (see module.nix) generates this for
+# you; use this file only when nginx is managed outside NixOS.
+#
+# Replace the host, certificate paths and upstream port. The listener is started
+# separately (`nix run .#listener -- serve --sts ... --out ...`) and binds
+# 127.0.0.1:8776.
+#
+# For the f1 shape the host's first label must be the team slug, for example
+# acme.attacker.example. Use a wildcard certificate (*.attacker.example) if you
+# want to demo several teams.
+
+server {
+  listen 80;
+  listen [::]:80;
+  server_name acme.attacker.example;
+  return 301 https://$host$request_uri;
+}
+
+server {
+  listen 443 ssl;
+  listen [::]:443 ssl;
+  http2 on;
+  server_name acme.attacker.example;
+
+  ssl_certificate     /etc/ssl/private/attacker.example.fullchain.pem;
+  ssl_certificate_key /etc/ssl/private/attacker.example.key;
+
+  # The query string carries a single-use auth code. Never log it.
+  access_log off;
+
+  # Only a redirect and a tiny demo page ever reach the listener.
+  client_max_body_size 8k;
+
+  location / {
+    proxy_pass http://127.0.0.1:8776;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_buffering off;
+
+    add_header Cache-Control "no-store" always;
+  }
+}
