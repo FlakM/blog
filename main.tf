@@ -267,21 +267,3 @@ resource "cloudflare_page_rule" "flakm_root_api" {
     cache_level = "bypass"
   }
 }
-
-resource "cloudflare_dns_record" "c4c_nginx" {
-  zone_id = var.ZONE_ID
-  name    = "c4c.flakm.com"
-  content = hcloud_server.blog.ipv4_address
-  type    = "A"
-  ttl     = 300
-  proxied = false
-}
-
-resource "cloudflare_dns_record" "coralogix_flakm" {
-  zone_id = var.ZONE_ID
-  name    = "coralogix.flakm.com"
-  content = hcloud_server.blog.ipv4_address
-  type    = "A"
-  ttl     = 300
-  proxied = false
-}
